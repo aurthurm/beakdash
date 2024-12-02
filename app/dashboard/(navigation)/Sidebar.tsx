@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { 
   ChevronDown,
   ChevronRight,
@@ -13,7 +14,9 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen }: SidebarProps) => {
-  const { setActive, items: menuItems } = useMenuStore()
+  const router = useRouter();
+  const pathname = usePathname();
+  const { setActive, items: menuItems, bottomItems } = useMenuStore()
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   const toggleSubmenu = (menu: ImenuItem) => {
@@ -28,18 +31,43 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     }
   };
 
+  const handleMenuClick = (item: ImenuItem, isBottomMenu: boolean = true) => {
+    if (isBottomMenu) {
+      // Handle bottom menu items (settings, connections, etc.)
+      if (item.route && pathname !== item.route) {
+        setActive(item)
+        router.push(item.route);
+      }
+    } else {
+      // Handle top menu items (dashboard items)
+      toggleSubmenu(item);
+      // Only navigate if we're not already on dashboard
+      if (pathname !== '/dashboard') {
+        router.push('/dashboard');
+      }
+    }
+  };
+
+   // Logo click handler
+   const handleLogoClick = () => {
+    if (pathname !== '/dashboard') {
+      router.push('/dashboard');
+    }
+  };
+
   return (
     <div className={`bg-white rounded-xl h-full transition-all duration-300 ${
       isOpen ? 'w-64' : 'w-20'
     } flex flex-col overflow-hidden`}>
-      <div className={`flex items-center gap-2 p-4 ${!isOpen && 'justify-center'}`}>
+      <div className={`flex items-center gap-2 p-4 ${!isOpen && 'justify-center'}`}
+        onClick={handleLogoClick}>
         <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
           <span className="text-white text-xl">B</span>
         </div>
         {isOpen && <h1 className="text-xl font-semibold">BeakDash</h1>}
       </div>
 
-      {isOpen && <div className="text-gray-500 text-sm px-4 mb-2">HOME</div>}
+      {/* {isOpen && <div className="text-gray-500 text-sm px-4 mb-2">HOME</div>} */}
 
       <nav className="flex-1 overflow-y-auto">
         <div className="px-2">
@@ -49,7 +77,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                 className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer mb-1 ${
                   item.active ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
                 }`}
-                onClick={() => toggleSubmenu(item)}
+                onClick={() => handleMenuClick(item, false)}
               >
                 {/* <item.icon size={20} className="flex-shrink-0" /> */}
                 {isOpen && (
@@ -86,7 +114,22 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
           ))}
         </div>
       </nav>
-
+      <nav className="border-t pt-1">
+        <div className="px-2">
+          {bottomItems.map((item, index) => (
+            <div key={index}>
+              <div
+                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer mb-1 ${
+                  item.active ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
+                }`}
+                onClick={() => handleMenuClick(item, true)}
+              >
+                {isOpen && (<span className="truncate">{item.label}</span>)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </nav>
       <div className="border-t p-4">
         <div className={`flex items-center gap-3 ${!isOpen && 'justify-center'}`}>
           <img

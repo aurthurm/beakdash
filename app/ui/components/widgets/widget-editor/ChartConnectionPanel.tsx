@@ -6,30 +6,40 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/app/ui/components/Select";
+} from "@/app/ui/components/select";
 import { Widget } from '@/app/types/widget';
-import React from 'react';
+import React,  { useState } from 'react';
+import { DataSource, DataSourceType } from "@/app/types/datasource";
 
 interface ConnectionPanelProps {
   widget: Widget;
+  onUpdate: (update: Partial<Widget>) => void;
 }
 
 // Left Panel Components
-const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ widget }) => {
+const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ widget, onUpdate }) => {
+  const [dataSourceType, setDataSourceType] = useState<DataSourceType>(widget.dataSource.type || 'sql');
+
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium mb-1">Data Source Type</label>
         <Select 
-            value="sql"
-            onValueChange={(val) => val}
+            value={dataSourceType}
+            onValueChange={(type: DataSourceType) => {
+              setDataSourceType(type);
+              onUpdate({
+                ...widget, 
+                dataSource: {...widget.dataSource, type} as DataSource
+              });
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select Value" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="sql">SQL Database</SelectItem>
-              <SelectItem value="api">REST API</SelectItem>
+              <SelectItem value="rest">REST API</SelectItem>
               <SelectItem value="csv">CSV File</SelectItem>
             </SelectContent>
           </Select>

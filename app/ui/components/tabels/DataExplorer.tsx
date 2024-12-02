@@ -1,25 +1,26 @@
 import React, { useMemo } from 'react';
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent
-} from '@/app/ui/components/Card';
+} from "@/app/ui/components/card";
 import {
-  Table as UITable,
+  Table,
   TableHeader,
   TableBody,
   TableHead,
   TableRow,
   TableCell
-} from '@/app/ui/components/Table';
-import { DataPoint } from '@/app/types/data';
+} from "@/app/ui/components/table";
+
+interface DataPoint {
+  [key: string]: any;
+}
 
 interface DataExplorerProps {
   data: DataPoint[];
 }
 
-const DataExplorer: React.FC<DataExplorerProps> = ({ data }) => {
+const DataExplorer = ({ data }: DataExplorerProps) => {
   const columns = useMemo(() => {
     try {
       if (!Array.isArray(data) || data.length === 0 || !data[0]) return [];
@@ -33,15 +34,15 @@ const DataExplorer: React.FC<DataExplorerProps> = ({ data }) => {
   }, [data]);
 
   return (
-    <Card>
-      <CardContent>
-        <div className="overflow-x-auto mt-2">
-          <UITable>
+    <Card className="w-full">
+      <CardContent className="p-6">
+        <div className="overflow-x-auto">
+          <Table>
             <TableHeader>
               <TableRow>
                 {columns.map(column => (
-                  <TableHead key={column}>
-                    <div className="flex items-center space-x-2">
+                  <TableHead key={column} className="font-medium">
+                    <div className="flex items-center gap-2">
                       <span>{column}</span>
                     </div>
                   </TableHead>
@@ -52,14 +53,16 @@ const DataExplorer: React.FC<DataExplorerProps> = ({ data }) => {
               {data.slice(0, 5).map((row, i) => (
                 <TableRow key={i}>
                   {columns.map(column => (
-                    <TableCell key={column}>{row[column]}</TableCell>
+                    <TableCell key={column}>
+                      {String(row[column])}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))}
             </TableBody>
-          </UITable>
+          </Table>
           {data.length > 5 && (
-            <div className="text-sm text-gray-500 mt-2">
+            <div className="text-sm text-muted-foreground mt-2">
               Showing 5 of {data.length} rows
             </div>
           )}

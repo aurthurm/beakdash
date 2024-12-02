@@ -1,3 +1,5 @@
+import { SchemaInfo } from "./database";
+
 export type DataSourceType = 'csv' | 'sql' | 'rest' | 'websocket' | 'firebase' | 'static' | 'javascript';
 
 export interface BaseDataSource {
@@ -5,25 +7,30 @@ export interface BaseDataSource {
   refreshInterval?: number; // in milliseconds
 }
 
+export interface CSVColumnMapping {
+  xAxis: string;
+  yAxis: string;
+}
+
 export interface CSVDataSource extends BaseDataSource {
   type: 'csv';
   fileId?: string;
-  columnMapping: {
-    xAxis: string;
-    yAxis: string;
-  };
+  columnMapping: CSVColumnMapping;
 }
 
 export interface SQLDataSource extends BaseDataSource {
   type: 'sql';
   query: string;
   connectionString?: string;
+  schema?: SchemaInfo;
 }
+
+export type RestMethod = 'GET' | 'POST';
 
 export interface RESTDataSource extends BaseDataSource {
   type: 'rest';
   endpoint: string;
-  method: 'GET' | 'POST';
+  method: RestMethod;
   headers?: Record<string, string>;
   body?: any;
   dataPath?: string; // JSONPath to extract data

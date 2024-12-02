@@ -1,4 +1,3 @@
-import { merge } from 'lodash';
 import { DataPoint } from "@/app/types/data";
 import { Widget } from "@/app/types/widget";
 import { ChartDataTransformer } from "@/app/lib/transformers/data-transformer";
@@ -12,16 +11,13 @@ export const getChartOptions = (widget: Widget, data: DataPoint[]) => {
   const baseChartOptions = getBaseOptions(widget);
   const commonOptions = getCommonOptions();
 
-  // Merge options in correct order: base -> common -> transformed -> widget specific
-  return merge({}, 
-    baseChartOptions, 
-    commonOptions,
-    {
-      title: { text: widget.title },
-      tooltip: { trigger: widget.type.chart === 'pie' ? 'item' : 'axis' },
-      ...transformedData
-    }
-  );
+  return { 
+    ...baseChartOptions, 
+    ...commonOptions,
+    title: { text: widget.title },
+    tooltip: { trigger: widget.type.chart === 'pie' ? 'item' : 'axis' },
+    ...transformedData
+  }
 };
 
 // Common options shared across all chart types

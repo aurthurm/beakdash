@@ -11,11 +11,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/app/ui/components/Select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/Tabs';
+} from "@/app/ui/components/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
 import { Aggregation, AggregationMethod, TransformConfig } from '@/app/types/data';
 import { ChartType, Widget } from '@/app/types/widget';
-import { useWidgetStore } from '@/app/store/widgets';
 
 interface ChartConfigPanelProps {
   widget: Widget;
@@ -24,32 +23,21 @@ interface ChartConfigPanelProps {
     numeric: string[];
     nonNumeric: string[];
   };
+  onUpdate: (update: Partial<Widget>) => void;
 }
 
-const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ widget, columns }) => {
+const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ widget, columns, onUpdate }) => {
   const [chartType, setChartType] = useState<ChartType>(widget.type.chart || 'bar');
   const [config, setConfig] = useState<TransformConfig>(widget.transformConfig);
-  const { updateWidget } = useWidgetStore()
 
-  const handleChartTypeChange = (ct: ChartType) => {
+  const onChartTypeChange = (ct: ChartType) => {
     setChartType(ct);
-    updateWidget(widget.id, {
-      ...widget,
-      type: {
-        ...widget.type,
-        chart: ct
-      }
-    });
+    onUpdate({...widget, type: {...widget.type, chart: ct}});
   };
 
   const onConfigChange = (config: TransformConfig) => {
-    console.log("widget config: ", widget.transformConfig);  
-    console.log("config: ", config);  
     setConfig(config);
-    updateWidget(widget.id, {
-      ...widget,
-      transformConfig: config
-    });
+    onUpdate({...widget, transformConfig: config});
   }
 
   return (
@@ -76,7 +64,7 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ widget, columns }) 
       <TabsContent value="generic" className="space-y-4">
       <div className="space-y-2">
           <label className="text-sm font-medium">Chart Type</label>
-          <Select value={chartType} onValueChange={handleChartTypeChange}>
+          <Select value={chartType} onValueChange={onChartTypeChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select chart type" />
             </SelectTrigger>

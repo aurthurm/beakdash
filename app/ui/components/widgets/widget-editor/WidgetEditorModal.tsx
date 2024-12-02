@@ -12,7 +12,7 @@ import { Editor } from '@monaco-editor/react';
 import { format, FormatOptionsWithLanguage } from 'sql-formatter';
 import DataExplorer from '@/app/ui/components/tabels/DataExplorer';
 import { DataPoint } from '@/app/types/data';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/Tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
 import ChartConfigPanel from '@/app/ui/components/widgets/widget-editor/ChartConfigPanel';
 import ChartConnectionPanel from '@/app/ui/components/widgets/widget-editor/ChartConnectionPanel';
 import { Widget } from '@/app/types/widget';
@@ -45,8 +45,9 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
   initData
 }) => {
   const [mounted, setMounted] = useState(false);
-  const { updateWidget } = useWidgetStore();
+  const { addWidget, updateWidget } = useWidgetStore();
   const [data, setData] = useState<DataPoint[]>(initData ?? []);
+  const [specifics, setSpecifics] = useState<Widget>(widget); // manage update/new locally
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [activePanel, setActivePanel] = useState<'connection' | 'chart'>('connection');
@@ -100,7 +101,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
     }
   };
 
-  const getEChartOptions = () => getChartOptions(widget, data ?? [])
+  const getEChartOptions = () => getChartOptions(specifics, data ?? [])
 
   const handleFormat = () => {
     try {
@@ -109,27 +110,42 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
       console.error('SQL formatting error:', error);
     }
   };
-  
-  const saveSQLQuery = () => {
-    console.log("saving SQL: ", sqlQuery);
-    handleFormat();
-    updateWidget(widget.id, {
-      dataSource: {
-        ...widget.dataSource,
-        query: sqlQuery,
-      } as SQLDataSource
-    })
-  };
 
   const executeQuery = async () => {
     const adapter = new SQLAdapter({
-      ...widget.dataSource,
+      ...specifics.dataSource,
       query: sqlQuery
     } as SQLDataSource);
     const fetchedData = await adapter.fetchData();
     console.log("fetchedData: ", fetchedData);
     setData(fetchedData);
   }
+
+  const handleUpdates = (updates: Partial<Widget>) => {
+    setSpecifics({
+      ...specifics,
+      ...updates
+    });
+  };
+
+  const handleSaveWidget = () => {
+    const payload = {
+      ...specifics,
+      title,
+      subtitle,
+      dataSource: {
+        ...widget.dataSource,
+        query: sqlQuery,
+      }
+    } as Widget;
+    if (mode === 'add') {
+      addWidget(payload)
+     } else {
+      updateWidget(widget.id, payload)
+     }
+     // close modal after saving
+     onClose();
+  };
 
   return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -148,7 +164,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
           {/* Left Panel */}
           <div className="w-1/3 border-r pr-6">
             {activePanel === 'connection' ? (
-              <ChartConnectionPanel widget={widget} />
+              <ChartConnectionPanel widget={specifics} onUpdate={handleUpdates} />
             ) : (<>
               <button
                 onClick={() => setActivePanel('connection')}
@@ -157,7 +173,10 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
                 <ArrowLeft size={16} className="mr-1" />
                 Back to Connection Settings
               </button>
-              <ChartConfigPanel widget={widget} columns={getColumns()}/>
+              <ChartConfigPanel 
+              widget={specifics}
+              columns={getColumns()}
+              onUpdate={handleUpdates} />
             </>)}
           </div>
 
@@ -204,13 +223,6 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
                   >
                     <RemoveFormatting size={14} className="mr-2" />
                     Format
-                  </button>
-                  <button
-                    className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    onClick={() => saveSQLQuery()}
-                  >
-                    <RemoveFormatting size={14} className="mr-2" />
-                    Save Query
                   </button>
                 </div>
               </div>
@@ -267,7 +279,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
             Cancel
           </button>
           <button
-            onClick={() => {/* Save widget */}}
+            onClick={() => handleSaveWidget()}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center"
           >
             <SaveAll size={20} className="mr-2" />

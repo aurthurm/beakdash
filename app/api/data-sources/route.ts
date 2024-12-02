@@ -6,8 +6,6 @@ interface DataBaseRequest {
   query: string;
 }
 
-
-
 export async function POST(request: NextRequest) {
   try {
     const { connectionString, query } = await request.json() as DataBaseRequest;

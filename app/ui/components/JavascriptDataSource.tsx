@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Play, Save } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/app/ui/components/alert';
+import { Button } from '@/app/ui/components/button';
+import { Card } from '@/app/ui/components/card';
 
 // CodeEditor component with syntax highlighting
 const CodeEditor = React.lazy(() => import('@uiw/react-textarea-code-editor'));

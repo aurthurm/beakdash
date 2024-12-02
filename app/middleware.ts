@@ -3,7 +3,6 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { Redis } from 'ioredis';
 import { ApiKeyModel } from '@/app/models/apiKey.model';
 
-
 // Or like this if you need to do something here.
 // export default auth((req) => {
 //   console.log(req.auth) //  { session: { user: { ... } } }
