@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard Widget Example</title>
+  <script src="https://cdn.example.com/dashboard-widget.min.js"></script>
+</head>
+<body>
+  <div id="widget-container"></div>
+  <script>
+    // Initialize the SDK
+    const dashboard = DashboardWidget.initialize('https://api.yourdashboard.com');
+
+    // Load a widget
+    dashboard.loadWidget({
+      containerId: 'widget-container',
+      apiKey: 'your-api-key',
+      widgetId: 'widget-123',
+      theme: 'light',
+      refreshInterval: 30000,
+      onLoad: () => console.log('Widget loaded'),
+      onError: (error) => console.error('Widget error:', error)
+    });
+  </script>
+</body>
+</html>

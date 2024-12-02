@@ -1,0 +1,9 @@
+{
+    "name": "dashboard-widget-sdk",
+    "version": "1.0.0",
+    "main": "dist/dashboard-widget.min.js",
+    "types": "dist/types/DashboardWidgetSDK.d.ts",
+    "files": [
+      "dist"
+    ]
+  }

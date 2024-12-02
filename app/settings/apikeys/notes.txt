@@ -1,0 +1,33 @@
+CREATE TABLE api_keys (
+  id UUID PRIMARY KEY,
+  key TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  user_id UUID NOT NULL,
+  permissions TEXT[] NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  last_used TIMESTAMP,
+  expires_at TIMESTAMP,
+  rate_limit JSONB NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+
+
+// pages/api/widgets/[id].ts
+import { apiKeyAuth } from '../../../middleware/apiKeyAuth';
+
+export default async function handler(req, res) {
+  await apiKeyAuth(req, res, async () => {
+    // Your widget endpoint logic here
+    const widget = await getWidget(req.params.id);
+    res.json(widget);
+  });
+}
+
+
+// use
+fetch('https://api.yourdashboard.com/widgets/123', {
+  headers: {
+    'X-API-Key': 'dk_your_api_key_here'
+  }
+});
