@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle  } from '@/app/ui/components/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription  } from '@/app/ui/components/dialog';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
 import { Button } from '@/app/ui/components/button';
@@ -6,25 +6,28 @@ import { Alert, AlertDescription } from '@/app/ui/components/alert';
 import { CSVForm, SQLForm, RESTForm } from './connection-forms';
 import { FileSpreadsheet, Database, Globe, TestTube, Save } from 'lucide-react';
 import { useState } from 'react';
+import { ConnectionType } from '@/app/types/datasource';
 
 
 interface ConnectionDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     editingConnection: any;
-    onSave: (type: string) => void;
-    onTest: (type: string) => void;
+    onSave: (type: ConnectionType) => void;
+    onTest: (type: ConnectionType) => void;
     forms: {
-      csv: any;
+    //   csv: any;
       sql: any;
-      rest: any;
+    //   rest: any;
     };
     setForms: {
       setCsvForm: (form: any) => void;
       setSqlForm: (form: any) => void;
       setRestForm: (form: any) => void;
     };
-    testStatus: { status: string; message: string };
+    testStatus: { success: boolean; message: string };
+    isTesting: boolean;
+    loading: boolean;
   }
   
   export function ConnectionDialog({
@@ -35,9 +38,12 @@ interface ConnectionDialogProps {
     onTest,
     forms,
     setForms,
-    testStatus,
+    testStatus, 
+    isTesting,
+    loading
   }: ConnectionDialogProps) {
     const [activeTab, setActiveTab] = useState(editingConnection?.type || "csv");
+    const isDisabled = isTesting || !testStatus.success || loading;
 
     return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -47,45 +53,55 @@ interface ConnectionDialogProps {
                 {editingConnection ? 'Edit Connection' : 'Add New Connection'}
                 </DialogTitle>
             </DialogHeader>
+            <DialogDescription>
+                Manage Connections
+            </DialogDescription>
             
             <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="csv" className="flex items-center gap-2">
+                    {/* <TabsTrigger value="csv" className="flex items-center gap-2">
                         <FileSpreadsheet size={16} />
                         CSV
-                    </TabsTrigger>
+                    </TabsTrigger> */}
                     <TabsTrigger value="sql" className="flex items-center gap-2">
                         <Database size={16} />
                         SQL
                     </TabsTrigger>
-                    <TabsTrigger value="rest" className="flex items-center gap-2">
+                    {/* <TabsTrigger value="rest" className="flex items-center gap-2">
                         <Globe size={16} />
                         REST
-                    </TabsTrigger>
+                    </TabsTrigger> */}
                 </TabsList>
 
-                <TabsContent value="csv" className="space-y-4">
+                {/* <TabsContent value="csv" className="space-y-4">
                     <CSVForm form={forms.csv} setForm={setForms.setCsvForm} />
-                </TabsContent>
+                </TabsContent> */}
 
                 <TabsContent value="sql" className="space-y-4">
                     <SQLForm form={forms.sql} setForm={setForms.setSqlForm} />
                 </TabsContent>
 
-                <TabsContent value="rest" className="space-y-4">
+                {/* <TabsContent value="rest" className="space-y-4">
                     <RESTForm form={forms.rest} setForm={setForms.setRestForm} />
-                </TabsContent>
+                </TabsContent> */}
             </Tabs>
 
-            {testStatus.status && (
-                <Alert className={`mt-4 ${
-                testStatus.status === 'success' ? 'bg-green-50' :
-                testStatus.status === 'error' ? 'bg-red-50' : 'bg-blue-50'
-                }`}>
-                <AlertDescription>{testStatus.message}</AlertDescription>
+            {isTesting ? (
+                <Alert>
+                    <AlertDescription>Testing connection...</AlertDescription>
                 </Alert>
-            )}
-
+            ) : (<>
+                {testStatus.success ? (
+                    <Alert>
+                        <AlertDescription>{testStatus.message}</AlertDescription>
+                    </Alert>
+                ) : (
+                    <Alert variant='destructive'>
+                        <AlertDescription>{testStatus.message}</AlertDescription>
+                    </Alert>
+                )}
+            </>)}
+    
             <div className="flex justify-end gap-2 mt-4">
                 <Button 
                 variant="outline" 
@@ -97,20 +113,23 @@ interface ConnectionDialogProps {
                 >
                 Cancel
                 </Button>
+
                 <Button 
                 variant="outline" 
                 className="flex items-center gap-2"
-                onClick={() => onTest(editingConnection?.type)}
+                onClick={() => onTest(activeTab)}
                 >
-                <TestTube size={16} />
-                Test Connection
+                    <TestTube size={16} />
+                    Test Connection
                 </Button>
+
                 <Button 
                 className="flex items-center gap-2"
-                onClick={() => onSave(editingConnection?.type)}
+                onClick={() => onSave(activeTab)}
+                disabled={isDisabled}
                 >
-                <Save size={16} />
-                {editingConnection ? 'Update' : 'Save'} Connection
+                    <Save size={16} />
+                    {editingConnection ? 'Update' : 'Save'} Connection
                 </Button>
             </div>
         </DialogContent>

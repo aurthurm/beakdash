@@ -1,5 +1,5 @@
+import { Dataset } from "./datasource";
 import { TransformConfig } from "./data";
-import { DataSource } from "./datasource";
 
 export interface WidgetLayout {
     i?: string;
@@ -25,9 +25,9 @@ export interface Widget {
     type: WidgetType;
     title: string;
     subtitle?: string;
-    data: any;
     layout: WidgetLayout;
-    dataSource: DataSource;
+    datasetId: string,
+    dataset: Dataset;
     transformConfig: TransformConfig;
 }
 

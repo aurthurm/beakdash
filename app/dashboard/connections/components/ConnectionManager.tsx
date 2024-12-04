@@ -1,4 +1,15 @@
 import { Button } from '@/app/ui/components/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/app/ui/components/alert-dialog"
 import { Input } from '@/app/ui/components/input';
 import { FileSpreadsheet, Database, Globe, Edit2, Trash2, Plus } from 'lucide-react';
 
@@ -11,13 +22,19 @@ interface ConnectionManagerProps {
   
   export function ConnectionManager({ connections, onEdit, onDelete, setIsDialogOpen }: ConnectionManagerProps) {
     return (<>
-      <h2 className="text-lg font-semibold">Manage Connections</h2>
       <div className="bg-white rounded-lg border shadow-sm">
-        <div className="p-4">
+        <div className="p-4 flex justify-between items-center">
           <Input
             placeholder="Search connections..."
             className="max-w-sm"
           />
+          {connections.length > 0 && (<Button
+              onClick={() => setIsDialogOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Add Connection
+            </Button>)}
         </div>
         <div className="border-t">
           {connections.length === 0 ? (
@@ -95,15 +112,28 @@ interface ConnectionManagerProps {
                           <Edit2 size={14} />
                           Edit
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDelete(connection.id)}
-                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700">
+                              <Trash2 size={14} /> Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete this connection from our servers.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => onDelete(connection.id)}>Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </td>
                   </tr>

@@ -1,46 +1,40 @@
 'use client';
 import { useConnections } from './hooks/useConnection';
 import { ConnectionDialog } from './components/ConnectionDialog';
-import { ConnectionsView } from './components/ConnectionView';
-import { useState } from 'react';
-import { Button } from '@/app/ui/components/button';
-import { Settings } from 'lucide-react';
+import { useEffect } from 'react';
+import { useConnectionStore } from '@/app/store/connections';
+import { ConnectionManager } from './components/ConnectionManager';
+import { useSession } from 'next-auth/react';
 
 export default function ConnectionsPage() {
-  const [activeView, setActiveView] = useState<'browse' | 'manage'>('browse');
+  const { data: session } = useSession()
+  const { connections, fetchConnections } = useConnectionStore();
   const {
-    connections,
     isDialogOpen,
     setIsDialogOpen,
     editingConnection,
     testStatus,
+    isTesting,
     forms,
     setForms,
-    handlers
+    handlers,
+    loading
   } = useConnections();
+
+  useEffect(() => {
+    if(!session?.user?.id){
+      console.log('No user id found, cant fetch connections');
+      return;
+    }
+    fetchConnections(session?.user?.id);
+  }, [fetchConnections, session]);
 
   return (
     <div className="p-6 space-y-6">
      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Data Connections</h1>
+          <h1 className="text-2xl font-bold">Connections</h1>
           <p className="text-gray-500">Configure and manage your data sources</p>
-        </div>
-        <div className="flex gap-3">
-          <Button 
-            variant={activeView === 'browse' ? 'default' : 'outline'}
-            onClick={() => setActiveView('browse')}
-          >
-            Browse
-          </Button>
-          <Button 
-            variant={activeView === 'manage' ? 'default' : 'outline'}
-            onClick={() => setActiveView('manage')}
-            className="flex items-center gap-2"
-          >
-            <Settings size={16} />
-            Manage
-          </Button>
         </div>
       </div>
 
@@ -53,10 +47,11 @@ export default function ConnectionsPage() {
         forms={forms}
         setForms={setForms}
         testStatus={testStatus}
+        isTesting={isTesting}
+        loading={loading}
       />
 
-      <ConnectionsView 
-        view={activeView}
+      <ConnectionManager 
         connections={connections}
         onEdit={handlers.handleEdit}
         onDelete={handlers.handleDelete}

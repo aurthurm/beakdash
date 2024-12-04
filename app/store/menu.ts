@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import type {} from '@redux-devtools/extension' // required for devtools typing
-import { LayoutDashboard, PlugZap, SettingsIcon } from 'lucide-react';
+import { Database, LayoutDashboard, PlugZap, SettingsIcon } from 'lucide-react';
 import { MenuState, ImenuItem } from '@/app/types/menu';
 
 export const useMenuStore = create<MenuState>()(
@@ -14,6 +14,12 @@ export const useMenuStore = create<MenuState>()(
             active: true
         } as ImenuItem],
         bottomItems: [
+          { 
+              icon: Database, 
+              label: 'Datasets', 
+              route: '/dashboard/datasets',
+              active: false
+          },
           { 
               icon: PlugZap, 
               label: 'Connections', 
