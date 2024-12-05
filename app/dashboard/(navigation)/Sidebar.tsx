@@ -6,21 +6,22 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
-import { useMenuStore } from '@/app/store/menu'
-import { ImenuItem } from '@/app/types/menu';
+import { usePageStore } from '@/app/store/pageStore'
+import { IPage } from '@/app/lib/drizzle/schemas';
+import { renderIcon } from '@/app/ui/components/icons/Icon';
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
-const Sidebar = ({ isOpen }: SidebarProps) => {
+const Sidebar = ({ isOpen }: SidebarProps) => {  
   const router = useRouter();
   const pathname = usePathname();
-  const { setActive, items: menuItems, bottomItems } = useMenuStore()
+  const { setActive, pages, bottomPages } = usePageStore()
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
-  const toggleSubmenu = (menu: ImenuItem) => {
-    if (menu.submenu) {
+  const toggleSubmenu = (menu: IPage) => {
+    if (menu.subpages) {
       setExpandedMenus(prev => 
         prev.includes(menu.label) 
           ? prev.filter(item => item !== menu.label)
@@ -31,7 +32,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     }
   };
 
-  const handleMenuClick = (item: ImenuItem, isBottomMenu: boolean = true) => {
+  const handleMenuClick = (item: IPage, isBottomMenu: boolean = true) => {
     if (isBottomMenu) {
       // Handle bottom menu items (settings, connections, etc.)
       if (item.route && pathname !== item.route) {
@@ -71,7 +72,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
 
       <nav className="flex-1 overflow-y-auto">
         <div className="px-2">
-          {menuItems.map((item, index) => (
+          {pages.map((item, index) => (
             <div key={index}>
               <div
                 className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer mb-1 ${
@@ -79,11 +80,11 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                 }`}
                 onClick={() => handleMenuClick(item, false)}
               >
-                {/* <item.icon size={20} className="flex-shrink-0" /> */}
+                {renderIcon(item.icon, 'flex-shrink-0')}
                 {isOpen && (
                   <>
                     <span className="truncate">{item.label}</span>
-                    {item.submenu && (
+                    {item.subpages && (
                       <span className="ml-auto">
                         {expandedMenus.includes(item.label) ? (
                           <ChevronDown size={16} />
@@ -95,9 +96,9 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                   </>
                 )}
               </div>
-              {isOpen && item.submenu && expandedMenus.includes(item.label) && (
+              {isOpen && item.subpages && expandedMenus.includes(item.label) && (
                 <div className="ml-9 mb-2">
-                  {item.submenu.map((subItem, subIndex) => (
+                  {item.subpages.map((subItem, subIndex) => (
                     <div
                       key={subIndex}
                       className={`py-2 px-3 text-sm hover:text-blue-600 cursor-pointer ${
@@ -116,7 +117,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       </nav>
       <nav className="border-t pt-1">
         <div className="px-2">
-          {bottomItems.map((item, index) => (
+          {bottomPages.map((item, index) => (
             <div key={index}>
               <div
                 className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer mb-1 ${
@@ -124,6 +125,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                 }`}
                 onClick={() => handleMenuClick(item, true)}
               >
+                {renderIcon(item.icon, 'flex-shrink-0')}
                 {isOpen && (<span className="truncate">{item.label}</span>)}
               </div>
             </div>

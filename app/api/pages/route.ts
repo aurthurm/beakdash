@@ -3,9 +3,19 @@ import { db } from '@/app/lib/drizzle';
 import { eq } from 'drizzle-orm';
 import { pagesTable, pageSchema } from '@/app/lib/drizzle/schemas';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const data = await db.select().from(pagesTable); 
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+  
+      if (!userId) {
+        return NextResponse.json(
+          { error: "userId is required" },
+          { status: 400 }
+        );
+      }
+      const data = await db.select().from(pagesTable)
+      .where(eq(pagesTable.userId, userId)); 
         return NextResponse.json(data);
     } catch (error) {
         console.error('Database error:', error);

@@ -2,30 +2,36 @@
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { ImenuItem } from '@/app/types/menu';
-import IconSelector from '@/app/ui/components/IconSelector';
+import IconSelector from '@/app/ui/components/icons/IconSelector';
 import { ErrorBoundary } from '@/app/ui/components/ErrorBoundary';
+import { IPage } from '@/app/lib/drizzle/schemas';
+import { useSession } from 'next-auth/react';
 
 interface AddPageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (menuItem: ImenuItem) => void;
+  onAdd: (menuItem: IPage) => void;
 }
 
 const AddPageModal: React.FC<AddPageModalProps> = ({ isOpen, onClose, onAdd }) => {
-  const [icon, setIcon] = useState('');
-  const [label, setLabel] = useState('');
+  const { data: session } = useSession()
+  const [form, setForm] = useState<IPage>({
+    icon: '', label: '', route: '', active: false, userId: ''
+  } as IPage);
+  
+  const updateForm = (update: Partial<IPage>) => {
+    setForm(({...form, ...update} as IPage));
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({
-      icon,
-      label
-    });
-
+    if(!session?.user?.id) {
+      console.log('You must be logged in to add a Page');
+      return;
+    };
+    onAdd({...form, userId: session?.user?.id} as IPage);
     // Reset form
-    setIcon('');
-    setLabel('');
+    setForm({icon: '', label: '', route: '', active: false, userId: ''});
   };
 
   if (!isOpen) return null;
@@ -35,7 +41,7 @@ const AddPageModal: React.FC<AddPageModalProps> = ({ isOpen, onClose, onAdd }) =
       <div className="bg-white rounded-xl p-6 w-full max-w-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">Add Page</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button aria-label="close add page modal" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X size={20} />
           </button>
         </div>
@@ -45,10 +51,21 @@ const AddPageModal: React.FC<AddPageModalProps> = ({ isOpen, onClose, onAdd }) =
             <label className="block text-sm font-medium mb-1">Label</label>
             <input
               type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              value={form.label}
+              onChange={(e) => updateForm({ label: e.target.value })}
               className="w-full p-2 border rounded-lg"
               placeholder="Page Label"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Route</label>
+            <input
+              type="text"
+              value={form.route}
+              onChange={(e) => updateForm({ route: e.target.value })}
+              className="w-full p-2 border rounded-lg"
+              placeholder="Page Route"
             />
           </div>
 
@@ -56,8 +73,8 @@ const AddPageModal: React.FC<AddPageModalProps> = ({ isOpen, onClose, onAdd }) =
             <label className="block text-sm font-medium mb-1">Page Icon</label>
             <ErrorBoundary>
               <IconSelector
-                selectedIcon={icon}
-                onSelectIcon={setIcon}
+                selectedIcon={form.icon}
+                onSelectIcon={(icon) => updateForm({ icon })}
               />
             </ErrorBoundary>
           </div>

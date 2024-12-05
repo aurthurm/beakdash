@@ -2,13 +2,15 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { Dataset } from '../types/datasource';
 
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+
 interface DatasetState {
   datasets: Dataset[];
   activeDatasetId: string | null;
   loading: Record<string, boolean>;
   error: Record<string, string | null>;
-  
-  fetchDatasets: (connectionId?: string) => Promise<void>;
+  lastFetch: number;
+  fetchDatasets: (connectionId: string) => Promise<void>;
   fetchDataset: (id: string) => Promise<void>;
   fetchDatasetData: (id: string) => Promise<void>;
   addDataset: (dataset: Omit<Dataset, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -26,35 +28,42 @@ export const useDatasetStore = create<DatasetState>()(
         activeDatasetId: null,
         loading: {},
         error: {},
-        
-        fetchDatasets: async (connectionId?: string) => {
-          const key = connectionId || 'all';
+        lastFetch: 0,
+        fetchDatasets: async (connectionId: string) => {
+          const now = Date.now();
+          const store = get();
+          
+          // Check cache freshness
+          if (
+            store.datasets.length > 0 && 
+            now - store.lastFetch < CACHE_TIME
+          ) {
+            return;
+          } 
+          set({ lastFetch: now });
+
           set(state => ({
-            loading: { ...state.loading, [key]: true },
-            error: { ...state.error, [key]: null }
+            loading: { ...state.loading, [connectionId]: true },
+            error: { ...state.error, [connectionId]: null }
           }));
 
           try {
-            const url = connectionId 
-              ? `/api/datasets?connectionId=${connectionId}`
-              : '/api/datasets';
-            
-            const response = await fetch(url);
+            const response = await fetch(`/api/datasets?connectionId=${connectionId}`);
             if (!response.ok) throw new Error('Failed to fetch datasets');
             const data = await response.json();
             
             set(state => ({
               datasets: connectionId
-                ? [...state.datasets.filter(ds => ds.connection.id !== connectionId), ...data]
+                ? [...state.datasets.filter(ds => ds.connectionId !== connectionId), ...data]
                 : data,
-              loading: { ...state.loading, [key]: false }
+              loading: { ...state.loading, [connectionId]: false }
             }));
           } catch (error) {
             set(state => ({
-              loading: { ...state.loading, [key]: false },
+              loading: { ...state.loading, [connectionId]: false },
               error: { 
                 ...state.error, 
-                [key]: error instanceof Error ? error.message : 'Unknown error'
+                [connectionId]: error instanceof Error ? error.message : 'Unknown error'
               }
             }));
           }

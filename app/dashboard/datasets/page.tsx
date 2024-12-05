@@ -23,8 +23,8 @@ export default function DatasetsPage() {
       console.log('No user id found, cant fetch datasets');
       return;
     }
-    fetchDatasets(session?.user?.id);
-  }, [fetchDatasets, session]);
+    fetchDatasets(session.user.id);
+  }, [session?.user?.id]);
 
   return (
     <div className="p-6 space-y-6">

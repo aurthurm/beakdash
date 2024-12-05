@@ -27,7 +27,7 @@ export default function ConnectionsPage() {
       return;
     }
     fetchConnections(session?.user?.id);
-  }, [fetchConnections, session]);
+  }, [session?.user?.id]);
 
   return (
     <div className="p-6 space-y-6">

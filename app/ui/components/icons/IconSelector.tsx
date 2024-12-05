@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import * as LucideIcons from 'lucide-react';
 import { Command } from 'cmdk';
 import { X } from 'lucide-react';
 import { useDebounce } from '@/app/lib/hooks/useDebounce';
+import { renderIcon } from '@/app/ui/components/icons/Icon';
 
 interface IconSelectorProps {
   selectedIcon: string;
@@ -22,12 +22,12 @@ export const IconSelector: React.FC<IconSelectorProps> = ({ selectedIcon, onSele
     // return Object.keys(LucideIcons).filter(key => key !== 'createLucideIcon').sort();
     const COMMON_ICONS = [
       'Home', 'User', 'Settings', 'File', 'Folder', 'Calendar',
-      'Mail', 'Bell', 'Search', 'Chart', 'Database', 'Users',
+      'Mail', 'Bell', 'Search', 'Database', 'Users',
       'Activity', 'AlertCircle', 'ArrowRight', 'Check', 'Clock',
       'Cloud', 'Code', 'Copy', 'Edit', 'Eye', 'Filter', 'Globe',
       'Heart', 'Image', 'Link', 'List', 'Lock', 'Map', 'Menu',
-      'Message', 'Monitor', 'Moon', 'More', 'Notification', 'Phone',
-      'Pin', 'Plus', 'Power', 'Refresh', 'Save', 'Share', 'Star',
+      'Monitor', 'Moon', 'Phone',
+      'Pin', 'Plus', 'Power', 'Save', 'Share', 'Star',
       'Sun', 'Trash', 'Unlock', 'Upload', 'Video', 'Wallet', 'Zap'
     ];
     return COMMON_ICONS.filter(key => key !== 'createLucideIcon').sort();
@@ -44,15 +44,6 @@ export const IconSelector: React.FC<IconSelectorProps> = ({ selectedIcon, onSele
     console.log('filterate', xx);
     return xx;
   }, [iconList, debouncedSearch]);
-
-  const renderIcon = (iconName: string) => {
-    const Icon = LucideIcons[iconName as keyof typeof LucideIcons] as React.FC<{ size?: number }>;
-    if (!Icon) {
-      console.warn(`Icon "${iconName}" not found in LucideIcons.`);
-      return null;
-    }
-    return <Icon />;
-  };
 
   return (
     <div className="relative">

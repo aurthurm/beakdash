@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { Connection } from '../types/datasource';
 
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+
 interface ConnectionState {
   connections: Connection[];
   activeConnectionId: string | null;
   loading: boolean;
   error: string | null;
-  
+  lastFetch: number;
   fetchConnections: (userId: string) => Promise<void>;
   fetchConnection: (id: string) => Promise<void>;
   addConnection: (connection: Omit<Connection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -25,8 +27,20 @@ export const useConnectionStore = create<ConnectionState>()(
         activeConnectionId: null,
         loading: false,
         error: null,
-        
+        lastFetch: 0,
         fetchConnections: async (userId) => {
+          const now = Date.now();
+          const store = get();
+          
+          // Check cache freshness
+          if (
+            store.connections.length > 0 && 
+            now - store.lastFetch < CACHE_TIME
+          ) {
+            return;
+          } 
+          set({ lastFetch: now });
+
           set({ loading: true, error: null });
           try {
             const response = await fetch('/api/connections?userId=' + userId);

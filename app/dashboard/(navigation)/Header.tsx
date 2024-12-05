@@ -3,15 +3,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Moon, Bell, ShoppingBag, Menu, LogOut, User, Plus } from 'lucide-react';
 import AddPageModal from '@/app/dashboard/(navigation)/AddPageModal'
-import { useMenuStore } from '@/app/store/menu'
+import { usePageStore } from '@/app/store/pageStore'
 
 interface HeaderProps {
-  isSidebarOpen: boolean;
   onToggleSidebar: () => void;
 }
 
-const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
-  const { addMenu } = useMenuStore()
+const Header = ({ onToggleSidebar }: HeaderProps) => {
+  const { addPage } = usePageStore()
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAddPageOpen, setIsAddPageOpen] = useState(false);
 
@@ -23,7 +22,6 @@ const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
         setIsProfileOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -33,19 +31,21 @@ const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
   return (
     <div className="bg-white rounded-xl mb-4 sticky top-0 z-10">
       <div className="h-16 flex items-center justify-between px-6">
-        <button 
-          className="p-2 hover:bg-gray-100 rounded-lg"
-          onClick={onToggleSidebar}
-        >
-          <Menu size={20} />
-        </button>
-        <button
-          onClick={() => setIsAddPageOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 text-blue-400 rounded-lg hover:text-blue-600"
-        >
-          <Plus size={20} />
-          Page
-        </button>
+        <div className="flex items-center justify-start gap-x-4">
+          <button 
+            className="p-2 hover:bg-gray-100 rounded-lg"
+            onClick={onToggleSidebar}
+          >
+            <Menu size={20} />
+          </button>
+          <button
+            onClick={() => setIsAddPageOpen(true)}
+            className="flex items-center gap-2 px-2 py-1 text-blue-400 rounded-lg hover:text-blue-600 border border-blue-400"
+          >
+            <Plus size={20} />
+            Page
+          </button>
+        </div>
 
         <div className="flex-1 max-w-2xl ml-8">
           <div className="relative">
@@ -59,7 +59,7 @@ const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="p-2 hover:bg-gray-100 rounded-full">
+          <button aria-label="Toggle dark mode" className="p-2 hover:bg-gray-100 rounded-full">
             <Moon size={20} />
           </button>
           <button className="p-2 hover:bg-gray-100 rounded-full">
@@ -71,7 +71,7 @@ const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
               8
             </span>
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full relative">
+          <button aria-label="Notification" className="p-2 hover:bg-gray-100 rounded-full relative">
             <Bell size={20} />
             <span className="absolute top-0 right-0 bg-red-500 w-2 h-2 rounded-full"></span>
           </button>
@@ -115,7 +115,7 @@ const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
         isOpen={isAddPageOpen}
         onClose={() => setIsAddPageOpen(false)}
         onAdd={(item) => {
-          addMenu(item);
+          addPage(item);
           setIsAddPageOpen(false);
         }}
       />

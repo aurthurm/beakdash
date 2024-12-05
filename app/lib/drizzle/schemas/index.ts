@@ -129,15 +129,16 @@ export type SelectDataset = typeof datasetsTable.$inferSelect;
 export type InsertDataset = typeof datasetsTable.$inferInsert;
 
 
-export const pageSchema = z.object({
+export const pageSchema: z.ZodSchema = z.lazy(() => z.object({
   id: z.string().uuid().optional(),
   label: z.string().min(1),
   route: z.string().optional(),
-  icon: z.string().optional(),
-  active: z.boolean().default(true),
+  icon: z.string(),
+  active: z.boolean().default(false),
   parentId: z.string().uuid().optional(),
+  subpages: z.array(pageSchema).optional(),
   userId: z.string().uuid(),
-}).strict();
+}).strict());
 export type IPage = z.infer<typeof pageSchema>;
 
 export const pagesTable = pgTable("pages", {
