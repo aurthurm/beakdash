@@ -1,5 +1,6 @@
 import { useDatasetStore } from '@/app/store/datasets';
 import { Dataset } from '@/app/types/datasource';
+import { set } from 'lodash';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
@@ -12,7 +13,6 @@ export function useDatasets() {
     const [datasetForm, setDatasetForm] = useState<Dataset>({} as Dataset);
   
     const handleSave = async () => {
-      console.log('Save dataset', datasetForm);
       if(!session?.user?.id) {
         alert('You must be logged in to save a dataset');
         return;
@@ -22,18 +22,21 @@ export function useDatasets() {
         userId: session?.user?.id
       });
 
-      // if (editingDataset) {
-      //   await updateDataset(editingDataset.id!, {
-      //     ...datasetForm, 
-      //     userId: session?.user?.id
-      //   });
-      // } else {
-      //   await addDataset({
-      //     ...datasetForm, 
-      //     userId: session?.user?.id,
-      //   });
-      // }
-      // setIsDialogOpen(false);
+      if (editingDataset) {
+        await updateDataset(editingDataset.id!, {
+          ...datasetForm, 
+          userId: session?.user?.id
+        });
+      } else {
+        await addDataset({
+          ...datasetForm, 
+          userId: session?.user?.id,
+        });
+      }
+      setIsDialogOpen(false);
+      // Reset forms
+      setDatasetForm({} as Dataset);
+      setEditingDataset({} as Dataset);
     }
 
     const handleEdit = (dataset: Dataset) => { 

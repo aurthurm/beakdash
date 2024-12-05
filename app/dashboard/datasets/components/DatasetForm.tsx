@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/app/ui/components/input";
 import { Label } from "@/app/ui/components/label";
 import { Badge } from "@/app/ui/components/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/ui/components/select";
-import { Connection, Dataset, SchemaInfo, ColumnInfo } from "@/app/types/datasource";
+import { Connection, Dataset, SchemaInfo } from "@/app/types/datasource";
 import { useConnectionStore } from "@/app/store/connections";
 import { useSession } from "next-auth/react";
 import { Button } from "@/app/ui/components/button";
@@ -21,35 +21,51 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [fetchingSchemas, setFetchingSchemas] = useState(false);
   const [schemaInfo, setSchemaInfo] = useState<SchemaInfo | null>(null);
-  const [selectedSchema, setSelectedSchema] = useState<string>('');
-  const [selectedTable, setSelectedTable] = useState<string>('');
-  const [columns, setColumns] = useState<ColumnInfo[]>([]);
 
+  const fetchSQLConnectionSchemas = useCallback(async (conn?: Connection) => {
+    const theConnection = conn || connection;
+    setFetchingSchemas(true);
+    if (!theConnection?.config) {
+      return;
+    }
+    try {
+      const response = await fetch('/api/connections/schemas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(theConnection?.config)
+      });
+      const results = await response.json();
+      setSchemaInfo(results);
+    } catch (error) {
+      console.error('Error fetching schemas:', error);
+      setSchemaInfo(null);
+    }
+    setFetchingSchemas(false);
+  }, [connection]);
+
+  // get user connections
   useEffect(() => {
     if (connections.length === 0 && session?.user?.id) {
       fetchConnections(session.user.id);
     }
   }, [session, connections, fetchConnections]);
 
-  // Reset selections when schema info changes
+  // form data if editing dataset
   useEffect(() => {
-    setSelectedSchema('');
-    setSelectedTable('');
-    setColumns([]);
-  }, [schemaInfo]);
-
-  // Update columns when table selection changes
-  useEffect(() => {
-    if (schemaInfo && selectedSchema && selectedTable) {
-      const tableColumns = schemaInfo[selectedSchema]?.[selectedTable] || [];
-      setColumns(tableColumns);
-    } else {
-      setColumns([]);
+    if(form.connectionId){
+      console.log('form:', form);
+      const conn = connections.find(c => c.id === form.connectionId);
+      if (conn) {
+        setConnection(conn);
+        Promise.resolve(fetchSQLConnectionSchemas(conn));
+      }
     }
-  }, [schemaInfo, selectedSchema, selectedTable]);
+  }, [connections, fetchSQLConnectionSchemas, form]);
 
-  const getTableColumns = (schema: string, table: string) => {
-    return schemaInfo?.[schema]?.[table] || [];
+  const getTableColumns = (table: string) => {
+    return schemaInfo?.[form.schema!]?.[table] || [];
   }
 
   const updateForm = (update: Partial<Dataset>) => {
@@ -68,47 +84,12 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
     }
   };
 
-  const onSetSelectedSchema = (schema: string) => {
-    setSelectedSchema(schema);
-    updateForm({ schema });
-  }
-
-  const onSetSelectedTable = (table: string) => {
-    setSelectedTable(table);
-    updateForm({ table });
-    updateForm({ columns: getTableColumns(selectedSchema, table) });
-  }
-
-  const fetchSQLConnectionSchemas = async (conn?: Connection) => {
-    const theConnection = conn || connection;
-    setFetchingSchemas(true);
-    if (!theConnection?.config) {
-      console.log('No connection config', theConnection);
-      return;
-    }
-    try {
-      const response = await fetch('/api/connections/schemas', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(theConnection?.config)
-      });
-      const results = await response.json();
-      setSchemaInfo(results);
-    } catch (error) {
-      console.error('Error fetching schemas:', error);
-      setSchemaInfo(null);
-    }
-    setFetchingSchemas(false);
-  };
-
   // Get available schemas from schemaInfo
   const availableSchemas = schemaInfo ? Object.keys(schemaInfo) : [];
   
   // Get available tables from selected schema
-  const availableTables = selectedSchema && schemaInfo 
-    ? Object.keys(schemaInfo[selectedSchema] || {})
+  const availableTables = form.schema && schemaInfo 
+    ? Object.keys(schemaInfo[form.schema] || {})
     : [];
 
   return (
@@ -164,8 +145,8 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
             <div>
               <Label>Schema</Label>
               <Select 
-                value={selectedSchema} 
-                onValueChange={onSetSelectedSchema}>
+                value={form.schema}
+                onValueChange={(schema) => updateForm({ schema, table: undefined })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select schema" />
                 </SelectTrigger>
@@ -179,9 +160,11 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
             <div>
               <Label>Table</Label>
               <Select 
-                value={selectedTable} 
-                onValueChange={onSetSelectedTable}
-                disabled={!selectedSchema}>
+                value={form.table}
+                onValueChange={(table) => {
+                  updateForm({ table, columns: getTableColumns(table) });
+                }}
+                disabled={!form.schema}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select table" />
                 </SelectTrigger>
@@ -194,35 +177,33 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
             </div>
           </div>
 
-          {columns.length > 0 && (
-            <div>
-              <Label>Available Columns</Label>
-              <div className="mt-2 border rounded-lg">
-                <div className="max-h-[150px] overflow-y-auto">
-                  <table className="w-full">
-                    <thead className="bg-muted sticky top-0">
-                      <tr>
-                        <th className="text-left p-2 text-sm font-medium">Column</th>
-                        <th className="text-left p-2 text-sm font-medium">Type</th>
+          {form.table && <div>
+            <Label>Available Columns</Label>
+            <div className="mt-2 border rounded-lg">
+              <div className="max-h-[150px] overflow-y-auto">
+                <table className="w-full">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="text-left p-2 text-sm font-medium">Column</th>
+                      <th className="text-left p-2 text-sm font-medium">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {form?.columns?.map((col, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="p-2 text-sm">{col.column}</td>
+                        <td className="p-2">
+                          <Badge variant="secondary" className="text-xs font-mono">
+                            {col.type}
+                          </Badge>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {columns.map((col, idx) => (
-                        <tr key={idx} className="border-t">
-                          <td className="p-2 text-sm">{col.column}</td>
-                          <td className="p-2">
-                            <Badge variant="secondary" className="text-xs font-mono">
-                              {col.type}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          )}
+          </div>}
         </>
       )}
     </div>

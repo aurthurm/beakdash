@@ -73,7 +73,6 @@ export interface Dataset {
   id: string;
   name: string;
   type: DatasetType; // Specifies if it's a table or a query
-  connectionType: ConnectionType; // Classifies the type of connection
   connectionId?: string; // Connection details
   connection?: Connection; // Connection details
   userId: string; // Connection details
