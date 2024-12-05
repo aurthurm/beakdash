@@ -1,12 +1,6 @@
-export type Nullable = 'NULL' | 'NOT NULL';
-
-export type Constraint = 'PRIMARY KEY' | 'UNIQUE' | '';
-
 export interface ColumnInfo {
     column: string;
     type: string;
-    nullable: Nullable;
-    constraint: Constraint;
 }
 
 export interface TableInfo {
@@ -80,9 +74,12 @@ export interface Dataset {
   name: string;
   type: DatasetType; // Specifies if it's a table or a query
   connectionType: ConnectionType; // Classifies the type of connection
-  connection: Connection; // Connection details
+  connectionId?: string; // Connection details
+  connection?: Connection; // Connection details
+  userId: string; // Connection details
   schema?: string; // Schema name (optional, for SQL-based connections)
   table?: string; // Table name (if the dataset is table-based)
+  columns?: ColumnInfo[]; // Column information (if the dataset is table-based)
   query?: string; // Query (if the dataset is query-based)
   refreshInterval?: number; // Interval for refreshing data in seconds (optional)
 }

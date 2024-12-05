@@ -223,28 +223,3 @@ export const useDatasetStore = create<DatasetState>()(
     )
   )
 );
-
-// Selector hooks
-export const useDatasets = (connectionId?: string) => {
-  const key = connectionId || 'all';
-  return {
-    datasets: useDatasetStore(state => 
-      connectionId 
-        ? state.datasets.filter(ds => ds.connection.id === connectionId)
-        : state.datasets
-    ),
-    loading: useDatasetStore(state => state.loading[key] || false),
-    error: useDatasetStore(state => state.error[key]),
-    fetchDatasets: useDatasetStore(state => state.fetchDatasets)
-  };
-};
-
-export const useDataset = (id: string) => ({
-  dataset: useDatasetStore(state => state.datasets.find(ds => ds.id === id)),
-  loading: useDatasetStore(state => state.loading[id] || false),
-  error: useDatasetStore(state => state.error[id]),
-  fetchDataset: useDatasetStore(state => () => state.fetchDataset(id)),
-  updateDataset: useDatasetStore(state => state.updateDataset),
-  deleteDataset: useDatasetStore(state => state.deleteDataset)
-});
-
