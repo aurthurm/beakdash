@@ -14,25 +14,25 @@ import {
 } from "@/app/ui/components/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
 import { Aggregation, AggregationMethod, TransformConfig } from '@/app/types/data';
-import { ChartType, Widget } from '@/app/types/widget';
+import { IWidget } from '@/app/lib/drizzle/schemas';
 
 interface ChartConfigPanelProps {
-  widget: Widget;
+  widget: IWidget;
   columns: {
     all: string[];
     numeric: string[];
     nonNumeric: string[];
   };
-  onUpdate: (update: Partial<Widget>) => void;
+  onUpdate: (update: Partial<IWidget>) => void;
 }
 
 const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ widget, columns, onUpdate }) => {
-  const [chartType, setChartType] = useState<ChartType>(widget.type.chart || 'bar');
+  const [chartType, setChartType] = useState<IWidget['type']>(widget.type || 'bar');
   const [config, setConfig] = useState<TransformConfig>(widget.transformConfig);
 
-  const onChartTypeChange = (ct: ChartType) => {
-    setChartType(ct);
-    onUpdate({...widget, type: {...widget.type, chart: ct}});
+  const onChartTypeChange = (type: IWidget['type']) => {
+    setChartType(type);
+    onUpdate({...widget, type });
   };
 
   const onConfigChange = (config: TransformConfig) => {

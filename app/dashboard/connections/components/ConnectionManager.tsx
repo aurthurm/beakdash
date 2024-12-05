@@ -12,10 +12,11 @@ import {
 } from "@/app/ui/components/alert-dialog"
 import { Input } from '@/app/ui/components/input';
 import { FileSpreadsheet, Database, Globe, Edit2, Trash2, Plus } from 'lucide-react';
+import { IConnection } from '@/app/lib/drizzle/schemas';
 
 interface ConnectionManagerProps {
-    connections: any[];
-    onEdit: (connection: any) => void;
+    connections: IConnection[];
+    onEdit: (connection: IConnection) => void;
     onDelete: (id: string) => void;
     setIsDialogOpen: (open: boolean) => void;
   }
@@ -99,7 +100,7 @@ interface ConnectionManagerProps {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(connection.updatedAt).toLocaleDateString()}
+                      {new Date(connection.updatedAt!).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
@@ -130,7 +131,7 @@ interface ConnectionManagerProps {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => onDelete(connection.id)}>Continue</AlertDialogAction>
+                              <AlertDialogAction onClick={() => onDelete(connection.id!)}>Continue</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>

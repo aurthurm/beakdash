@@ -1,11 +1,11 @@
 import { DataPoint } from "@/app/types/data";
-import { Widget } from "@/app/types/widget";
 import { ChartDataTransformer } from "@/app/lib/transformers/data-transformer";
+import { IWidget } from "../drizzle/schemas";
 
-export const getChartOptions = (widget: Widget, data: DataPoint[]) => {
-  if (!widget.type.chart) return {};
+export const getChartOptions = (widget: IWidget, data: DataPoint[]) => {
+  if (!widget.type) return {};
 
-  const transformerConfig = {type: widget.type.chart, ...widget.transformConfig};
+  const transformerConfig = {type: widget.type, ...widget.transformConfig};
   const transformedData = ChartDataTransformer.transform(data, transformerConfig);
 
   const baseChartOptions = getBaseOptions(widget);
@@ -15,7 +15,7 @@ export const getChartOptions = (widget: Widget, data: DataPoint[]) => {
     ...baseChartOptions, 
     ...commonOptions,
     title: { text: widget.title },
-    tooltip: { trigger: widget.type.chart === 'pie' ? 'item' : 'axis' },
+    tooltip: { trigger: widget.type === 'pie' ? 'item' : 'axis' },
     ...transformedData
   }
 };
@@ -62,7 +62,7 @@ const getCommonOptions = () => ({
   }
 });
 
-const getBaseOptions = (widget: Widget) => {
+const getBaseOptions = (widget: IWidget) => {
   const commonAxisConfig = {
     axisLine: {
       lineStyle: {
@@ -80,7 +80,7 @@ const getBaseOptions = (widget: Widget) => {
     }
   };
 
-  switch (widget.type.chart) {
+  switch (widget.type) {
     case 'line':
       return {
         xAxis: {
@@ -197,35 +197,6 @@ const getBaseOptions = (widget: Widget) => {
           animationEasing: 'cubicOut'
         }]
       };
-
-    case 'scatter':
-      return {
-        xAxis: {
-          type: 'value',
-          ...commonAxisConfig,
-          scale: true
-        },
-        yAxis: {
-          type: 'value',
-          ...commonAxisConfig,
-          scale: true
-        },
-        series: [{
-          type: 'scatter',
-          symbolSize: 10,
-          emphasis: {
-            focus: 'series',
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)'
-            }
-          },
-          animationDuration: 1000,
-          animationEasing: 'cubicOut'
-        }]
-      };
-
     default:
       return {};
   }

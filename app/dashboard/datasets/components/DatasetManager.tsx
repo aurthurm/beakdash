@@ -12,10 +12,11 @@ import {
 } from "@/app/ui/components/alert-dialog"
 import { Input } from '@/app/ui/components/input';
 import { FileSpreadsheet, Database, Globe, Edit2, Trash2, Plus } from 'lucide-react';
+import { IDataset } from '@/app/lib/drizzle/schemas';
 
 interface DatasetManagerProps {
-    datasets: any[];
-    onEdit: (dataset: any) => void;
+    datasets: IDataset[];
+    onEdit: (dataset: IDataset) => void;
     onDelete: (id: string) => void;
     setIsDialogOpen: (open: boolean) => void;
   }
@@ -99,7 +100,7 @@ interface DatasetManagerProps {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(dataset.updatedAt).toLocaleDateString()}
+                      {new Date(dataset.updatedAt!).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
@@ -130,7 +131,7 @@ interface DatasetManagerProps {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => onDelete(dataset.id)}>Continue</AlertDialogAction>
+                              <AlertDialogAction onClick={() => onDelete(dataset.id!)}>Continue</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>

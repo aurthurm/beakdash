@@ -3,50 +3,31 @@
 import React, { useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { Settings, Grip, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
-import WidgetEditorModal from '@/app/ui/components/widgets/widget-editor/WidgetEditorModal';
-import { useWidgetStore } from '@/app/store/widgets';
-import { Widget as WidgetType, ChartType } from '@/app/types/widget';
-import ChartTypeToggle from '@/app/ui/components/widgets/ChartTypeToggle';
+import WidgetEditorModal from '@/app/dashboard/components/widgets/widget-editor/WidgetEditorModal';
+import { useWidgetStore } from '@/app/store/widgetStore';
+import ChartTypeToggle from '@/app/dashboard/components/widgets/ChartTypeToggle';
 import { useDataSource } from '@/app/lib/hooks/useDataSource';
-import AICopilotButton from '@/app/ui/components/AICopilot/AICopilotButton';
-import { WidgetError } from '@/app/ui/components/widgets/states/WidgetError';
-import { WidgetSkeleton } from '@/app/ui/components/widgets/states/WidgetSkeleton';
+import AICopilotButton from '@/app/dashboard/components/AICopilot/AICopilotButton';
+import { WidgetError } from '@/app/dashboard/components/widgets/states/WidgetError';
+import { WidgetSkeleton } from '@/app/dashboard/components/widgets/states/WidgetSkeleton';
 import { getChartOptions } from '@/app/lib/charts/chart-options';
 import { DataPoint } from '@/app/types/data';
+import { IWidget } from '@/app/lib/drizzle/schemas';
 
 interface WidgetProps {
-  widget: WidgetType;
+  widget: IWidget;
 }
-
-const overrides = {
-  // type: {
-  //   visual: 'chart',
-  //   chart: 'bar'
-  // },
-  // transformConfig: {
-  //   series: [{
-  //     categoryKey: 'test_name',
-  //     valueKey: 'sum',
-  //   }],
-  // },
-  dataSource: {
-    type: 'sql',
-    //query: "SELECT sample_type, test_name, SUM(total) FROM dashboard.rejection_rate_aggregate GROUP BY sample_type, test_name ORDER BY sample_type LIMIT 10",
-    connectionString: "postgres://nmrl:password@localhost:5432/central_repository",
-    refreshInterval: 5000000
-  }
-} as WidgetType;
 
 const WidgetVisual: React.FC<WidgetProps> = ({ widget }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const { updateWidget, removeWidget } = useWidgetStore();
   const [editorData, setEditorData] = useState<DataPoint[]>([]);
-  const { data, loading, error } = useDataSource(widget.dataSource); // widget?.dataSource ?? 
+  const { data, loading, error } = useDataSource(widget.datasetId); 
 
-  const isChart = widget.type.visual === 'chart';
+  const isChart = widget.type !== 'count';
 
   if (loading) {
-    return <WidgetSkeleton type={widget.type.visual === 'chart' ? 'chart' : 'number'} />;
+    return <WidgetSkeleton type={widget.type} />;
   }
 
   const handleOpenEditor = () => {
@@ -65,10 +46,7 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget }) => {
         isOpen={isEditOpen}
         mode="edit"
         onClose={() => setIsEditOpen(false)}
-        widget={{
-          ...widget,
-          ...overrides
-        }}
+        widget={widget}
         initData={editorData}
       />
       <WidgetError
@@ -79,18 +57,11 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget }) => {
     </>);
   }
 
-  // console.log("data !!!!!!!!!!!!!!!!!!!!!!!!!: ", data);
-
-  const getEChartOptions = () => getChartOptions({
-    ...widget,
-    ...overrides
-  }, data)
+  const getEChartOptions = () => getChartOptions(widget, data)
 
   const handleChartTypeChange = (chart: ChartType) => {
     updateWidget(widget.id, { type: { visual: 'chart', chart } });
   };
-
-
 
   return (
     <div id={widget.id} className="h-full">
@@ -109,7 +80,7 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget }) => {
           />
           {isChart && (
             <ChartTypeToggle
-              currentChart={widget.type.chart!}
+              currentChart={widget.type!}
               onChange={handleChartTypeChange}
             />
           )}

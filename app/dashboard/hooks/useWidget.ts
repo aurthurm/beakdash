@@ -4,7 +4,7 @@ import { SQLConnection, ConnectionType, SQLConnectionConfig } from '@/app/types/
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
-export function useConnections() {
+export function useWidget() {
     const { data: session } = useSession()
     const { loading, addConnection, updateConnection, deleteConnection } = useConnectionStore();
     const [isDialogOpen, setIsDialogOpen] = useState(false);

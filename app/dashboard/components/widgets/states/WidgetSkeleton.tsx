@@ -1,7 +1,8 @@
+import { IWidget } from '@/app/lib/drizzle/schemas';
 import React from 'react';
 
 interface WidgetSkeletonProps {
-  type: 'chart' | 'number';
+  type: IWidget['type'];
 }
 
 export const WidgetSkeleton: React.FC<WidgetSkeletonProps> = ({ type }) => {
@@ -11,7 +12,7 @@ export const WidgetSkeleton: React.FC<WidgetSkeletonProps> = ({ type }) => {
         <div className="h-6 w-1/3 bg-gray-200 rounded mb-4" />
         <div className="h-4 w-1/4 bg-gray-200 rounded mb-6" />
         
-        {type === 'chart' ? (
+        {type !== 'count' ? (
           <div className="w-full h-[calc(100%-4rem)] bg-white rounded-lg p-4">
             <div className="w-full h-full flex flex-col gap-2">
               <div className="w-full h-8 bg-gray-200 rounded" />

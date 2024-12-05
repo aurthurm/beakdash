@@ -1,7 +1,15 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import type {} from '@redux-devtools/extension' // required for devtools typing
-import { WidgetState, Widget, VisualType } from '@/app/types/widget';
+import { IWidget } from '../lib/drizzle/schemas';
+
+export interface WidgetState {
+  widgets: IWidget[];
+  addWidget: (item : IWidget) => void;
+  updateWidget: (id: string, updates: Partial<IWidget>) => void;
+  removeWidget: (id: string) => void;
+}
+
 
 export const useWidgetStore = create<WidgetState>()(
   devtools(
@@ -10,7 +18,7 @@ export const useWidgetStore = create<WidgetState>()(
         widgets: [],
         addWidget: (item) => set((state) => ({ 
           widgets: [...state.widgets, {
-            ...item, layout: newItemPosition(state.widgets, item.type.visual)
+            ...item, layout: newItemPosition(state.widgets, item.type)
           }] 
         })),
         updateWidget: (id, updates) =>
@@ -32,7 +40,7 @@ export const useWidgetStore = create<WidgetState>()(
 )
 
 
-const newItemPosition = (widgets: Widget[], visual: VisualType) => {
+const newItemPosition = (widgets: IWidget[], type: IWidget['type']) => {
   const layout = widgets?.map(w => w.layout)
 
   // Find all occupied positions
@@ -65,7 +73,7 @@ const newItemPosition = (widgets: Widget[], visual: VisualType) => {
   return {
     x: newX,
     y: newY,
-    w: visual == 'chart' ? 4 : 2,
-    h: visual == 'chart' ? 3 : 2,
+    w: type != 'count' ? 4 : 2,
+    h: type != 'count' ? 3 : 2,
   };
 }

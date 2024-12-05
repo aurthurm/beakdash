@@ -9,17 +9,16 @@ import {
   RemoveFormatting
 } from 'lucide-react';
 import { Editor } from '@monaco-editor/react';
-import { format, FormatOptionsWithLanguage } from 'sql-formatter';
-import DataExplorer from '@/app/ui/components/tabels/DataExplorer';
-import { DataPoint } from '@/app/types/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
-import ChartConfigPanel from '@/app/ui/components/widgets/widget-editor/ChartConfigPanel';
-import ChartConnectionPanel from '@/app/ui/components/widgets/widget-editor/ChartConnectionPanel';
-import { Widget } from '@/app/types/widget';
+import { format, FormatOptionsWithLanguage } from 'sql-formatter';
+import DataExplorer from '@/app/dashboard/components/DataExplorer';
+import { DataPoint } from '@/app/types/data';
+import ChartConfigPanel from '@/app/dashboard/components/widgets/widget-editor/ChartConfigPanel';
+import ChartConnectionPanel from '@/app/dashboard/components/widgets/widget-editor/ChartConnectionPanel';
 import { getChartOptions } from '@/app/lib/charts/chart-options';
-import { SQLDataSource } from '@/app/types/datasource';
-import { useWidgetStore } from '@/app/store/widgets';
+import { useWidgetStore } from '@/app/store/widgetStore';
 import { SQLAdapter } from '@/app/lib/adapters/sql';
+import { IWidget } from '@/app/lib/drizzle/schemas';
 
 const SQL_FORMAT_OPTIONS = {
   language: 'postgresql', // or 'mysql', 'sqlite', etc.
@@ -33,7 +32,7 @@ interface WidgetModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'add' | 'edit';
-  widget: Widget;
+  widget: IWidget;
   initData?: DataPoint[];
 }
 
@@ -47,7 +46,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
   const [mounted, setMounted] = useState(false);
   const { addWidget, updateWidget } = useWidgetStore();
   const [data, setData] = useState<DataPoint[]>(initData ?? []);
-  const [specifics, setSpecifics] = useState<Widget>(widget); // manage update/new locally
+  const [specifics, setSpecifics] = useState<IWidget>(widget); // manage update/new locally
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [activePanel, setActivePanel] = useState<'connection' | 'chart'>('connection');
@@ -62,9 +61,9 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
     if (mode === 'edit' && widget) {
       setTitle(widget.title);
       setSubtitle(widget.subtitle || '');
-      if(widget.dataSource?.type === 'sql') {
-        setSqlQuery((widget.dataSource as SQLDataSource).query ?? '');
-      }
+      // if(widget.data?.type === 'sql') {
+      //   setSqlQuery((widget.dataSource as SQLDataSource).query ?? '');
+      // }
     }
   }, [mode, widget]);
 
@@ -265,7 +264,6 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
               </TabsContent>
 
               <ChartTabContent setActivePanel={setActivePanel} eChartOptions={getEChartOptions()} />
-        
             </Tabs>
           </div>
         </div>

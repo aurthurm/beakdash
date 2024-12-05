@@ -1,6 +1,5 @@
+import { IDataset } from '@/app/lib/drizzle/schemas';
 import { useDatasetStore } from '@/app/store/datasets';
-import { Dataset } from '@/app/types/datasource';
-import { set } from 'lodash';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
@@ -8,9 +7,9 @@ export function useDatasets() {
     const { data: session } = useSession()
     const { loading, addDataset, updateDataset, deleteDataset } = useDatasetStore();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingDataset, setEditingDataset] = useState<Dataset | null>(null);
+    const [editingDataset, setEditingDataset] = useState<IDataset | null>(null);
   
-    const [datasetForm, setDatasetForm] = useState<Dataset>({} as Dataset);
+    const [datasetForm, setDatasetForm] = useState<IDataset>({} as IDataset);
   
     const handleSave = async () => {
       if(!session?.user?.id) {
@@ -35,11 +34,11 @@ export function useDatasets() {
       }
       setIsDialogOpen(false);
       // Reset forms
-      setDatasetForm({} as Dataset);
-      setEditingDataset({} as Dataset);
+      setDatasetForm({} as IDataset);
+      setEditingDataset({} as IDataset);
     }
 
-    const handleEdit = (dataset: Dataset) => { 
+    const handleEdit = (dataset: IDataset) => { 
       setEditingDataset(dataset);
       setDatasetForm(dataset);
       setIsDialogOpen(true);

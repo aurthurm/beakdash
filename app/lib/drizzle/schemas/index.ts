@@ -156,14 +156,21 @@ export const pagesTable = pgTable("pages", {
 export type SelectPage = typeof pagesTable.$inferSelect;
 export type InsertPage = typeof pagesTable.$inferInsert;
 
+export const wtypes = ['count', 'line', 'pie', 'bar'] as const;
 export const widgetSchema = z.object({
   id: z.string().uuid().optional(),
   pageId: z.string().uuid(),
   subPageId: z.string().uuid().optional(),
-  type: z.string().uuid(),
+  type: z.enum(wtypes),
   title: z.string().min(1),
   subtitle: z.string().optional(),
-  layout: z.string().min(1),
+  layout: z.object({
+    i: z.string().optional(),
+    x: z.number(),
+    y: z.number(),
+    w: z.number(),
+    h: z.number(),
+  }),
   datasetId: z.string().uuid(),
   transformConfig: z.record(z.any())
 }).strict();

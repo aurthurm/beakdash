@@ -1,19 +1,19 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { Connection } from '../types/datasource';
+import { IConnection } from '../lib/drizzle/schemas';
 
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
 interface ConnectionState {
-  connections: Connection[];
+  connections: IConnection[];
   activeConnectionId: string | null;
   loading: boolean;
   error: string | null;
   lastFetch: number;
   fetchConnections: (userId: string) => Promise<void>;
   fetchConnection: (id: string) => Promise<void>;
-  addConnection: (connection: Omit<Connection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateConnection: (id: string, connection: Partial<Connection>) => Promise<void>;
+  addConnection: (connection: Omit<IConnection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateConnection: (id: string, connection: Partial<IConnection>) => Promise<void>;
   deleteConnection: (id: string) => Promise<void>;
   setActiveConnection: (id: string | null) => void;
   clearError: () => void;

@@ -3,26 +3,27 @@ import { Input } from "@/app/ui/components/input";
 import { Label } from "@/app/ui/components/label";
 import { Badge } from "@/app/ui/components/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/ui/components/select";
-import { Connection, Dataset, SchemaInfo } from "@/app/types/datasource";
+import { SchemaInfo } from "@/app/types/datasource";
 import { useConnectionStore } from "@/app/store/connections";
 import { useSession } from "next-auth/react";
 import { Button } from "@/app/ui/components/button";
 import { Alert, AlertDescription } from "@/app/ui/components/alert";
 import { Loader } from "lucide-react";
+import { IConnection, IDataset } from "@/app/lib/drizzle/schemas";
 
 interface DatasetFormProps {
-  form: Dataset;
-  setForm: (form: Dataset) => void;
+  form: IDataset;
+  setForm: (form: IDataset) => void;
 }
 
 export function DatasetForm({ form, setForm }: DatasetFormProps) {
   const { data: session } = useSession();
   const { connections, fetchConnections } = useConnectionStore();
-  const [connection, setConnection] = useState<Connection | null>(null);
+  const [connection, setConnection] = useState<IConnection | null>(null);
   const [fetchingSchemas, setFetchingSchemas] = useState(false);
   const [schemaInfo, setSchemaInfo] = useState<SchemaInfo | null>(null);
 
-  const fetchSQLConnectionSchemas = useCallback(async (conn?: Connection) => {
+  const fetchSQLConnectionSchemas = useCallback(async (conn?: IConnection) => {
     const theConnection = conn || connection;
     setFetchingSchemas(true);
     if (!theConnection?.config) {
@@ -68,7 +69,7 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
     return schemaInfo?.[form.schema!]?.[table] || [];
   }
 
-  const updateForm = (update: Partial<Dataset>) => {
+  const updateForm = (update: Partial<IDataset>) => {
     setForm({ ...form, ...update });
   };
 

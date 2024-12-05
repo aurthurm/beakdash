@@ -4,26 +4,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/ta
 import { Button } from '@/app/ui/components/button';
 import { Alert, AlertDescription } from '@/app/ui/components/alert';
 import { CSVForm, SQLForm, RESTForm } from './connection-forms';
-import { FileSpreadsheet, Database, Globe, TestTube, Save } from 'lucide-react';
+import { Database, TestTube, Save } from 'lucide-react';
 import { useState } from 'react';
 import { ConnectionType } from '@/app/types/datasource';
+import { IConnection } from '@/app/lib/drizzle/schemas';
 
 
 interface ConnectionDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    editingConnection: any;
+    editingConnection?: IConnection;
     onSave: (type: ConnectionType) => void;
     onTest: (type: ConnectionType) => void;
     forms: {
     //   csv: any;
-      sql: any;
+      sql: IConnection;
     //   rest: any;
     };
     setForms: {
-      setCsvForm: (form: any) => void;
-      setSqlForm: (form: any) => void;
-      setRestForm: (form: any) => void;
+      setCsvForm: (form: IConnection) => void;
+      setSqlForm: (form: IConnection) => void;
+      setRestForm: (form: IConnection) => void;
     };
     testStatus: { success: boolean; message: string };
     isTesting: boolean;
@@ -42,7 +43,7 @@ interface ConnectionDialogProps {
     isTesting,
     loading
   }: ConnectionDialogProps) {
-    const [activeTab, setActiveTab] = useState(editingConnection?.type || "csv");
+    const [activeTab, setActiveTab] = useState<ConnectionType>(editingConnection?.type || 'sql');
     const isDisabled = isTesting || !testStatus.success || loading;
 
     return (
@@ -57,7 +58,7 @@ interface ConnectionDialogProps {
                 Manage Connections
             </DialogDescription>
             
-            <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs defaultValue={activeTab} onValueChange={(v) => setActiveTab(v as ConnectionType)} className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                     {/* <TabsTrigger value="csv" className="flex items-center gap-2">
                         <FileSpreadsheet size={16} />

@@ -16,7 +16,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
         <div className="flex-1 flex flex-col overflow-hidden p-4">
           <Header 
-            isSidebarOpen={isSidebarOpen} 
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
           />
           {children}

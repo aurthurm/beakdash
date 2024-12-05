@@ -5,39 +5,38 @@ import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { Plus } from 'lucide-react';
-import WidgetVisual from '@/app/ui/components/widgets/WidgetVisual';
-import WidgetEditorModal from '@/app/ui/components/widgets/widget-editor/WidgetEditorModal';
-import AICopilotButton from '@/app/ui/components/AICopilot/AICopilotButton';
-import AICopilotChat from '@/app/ui/components/AICopilot/AICopilotChat';
-import { useWidgetStore } from '@/app/store/widgets';
-import { ImenuItem } from '@/app/types/menu';
-import { Widget } from '@/app/types/widget';
+import WidgetVisual from '@/app/dashboard/components/widgets/WidgetVisual';
+import WidgetEditorModal from '@/app/dashboard/components/widgets/widget-editor/WidgetEditorModal';
+import AICopilotButton from '@/app/dashboard/components/AICopilot/AICopilotButton';
+import AICopilotChat from '@/app/dashboard/components/AICopilot/AICopilotChat';
+import { useWidgetStore } from '@/app/store/widgetStore';
+import { IPage, IWidget } from '@/app/lib/drizzle/schemas';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const WidgetGrid = ({ menuItem }: { menuItem: ImenuItem }) => {
+const WidgetGrid = ({ page }: { page: IPage }) => {
   const { widgets, addWidget, updateWidget } = useWidgetStore();
-  const [menuWidgets, setMenuWidgets] = useState<Widget[]>([]);
+  const [menuWidgets, setMenuWidgets] = useState<IWidget[]>([]);
   const [layouts, setLayouts] = useState({});
   const [isAddWidgetOpen, setIsAddWidgetOpen] = useState(false);
 
   useEffect(() => {
     // Filter widgets belonging to the current menu item
-    const wgts: Widget[] = widgets.filter((w) => w.pageId === menuItem.label);
+    const wgts: IWidget[] = widgets.filter((w) => w.pageId === page.label);
     setMenuWidgets(wgts);
     const llll = { lg: wgts?.map(w => ({...w.layout, i: w.id})) }
     setLayouts(llll)
-  }, [widgets, menuItem]);
+  }, [widgets, page]);
 
-  const handleAddWidget = (widget: Widget) => {
+  const handleAddWidget = (widget: IWidget) => {
     addWidget({
       ...widget,
-      pageId: menuItem.label,
+      pageId: page.label,
     });
     setIsAddWidgetOpen(false);
   };
 
-  const handleEditWidget = (id: string, updates: Partial<Widget>) => {
+  const handleEditWidget = (id: string, updates: Partial<IWidget>) => {
     updateWidget(id, updates);
   };
 
@@ -53,7 +52,7 @@ const WidgetGrid = ({ menuItem }: { menuItem: ImenuItem }) => {
   return (
     <div className="p-4">
       <div className="flex justify-between mb-6">
-        <h2 className="text-2xl font-bold">{menuItem?.label} Widgets</h2>
+        <h2 className="text-2xl font-bold">{page?.label} Widgets</h2>
         <div className="flex gap-2">
           <AICopilotButton variant='button' />
           <button
@@ -85,7 +84,7 @@ const WidgetGrid = ({ menuItem }: { menuItem: ImenuItem }) => {
       <WidgetEditorModal
         isOpen={isAddWidgetOpen}
         mode="add"
-        widget={{} as Widget}
+        widget={{} as IWidget}
         onClose={() => setIsAddWidgetOpen(false)}
       />
 

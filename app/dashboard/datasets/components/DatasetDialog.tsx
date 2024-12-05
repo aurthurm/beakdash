@@ -3,15 +3,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription  } 
 import { Button } from '@/app/ui/components/button';
 import { DatasetForm } from './DatasetForm';
 import { Save } from 'lucide-react';
+import { IDataset } from '@/app/lib/drizzle/schemas';
 
 
 interface DatasetDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    editingDataset: any;
+    editingDataset: IDataset | null;
     onSave: () => void;
-    form: any;
-    setForm: (form: any) => void;
+    form: IDataset;
+    setForm: (form: Partial<IDataset>) => void;
   }
   
   export function DatasetDialog({

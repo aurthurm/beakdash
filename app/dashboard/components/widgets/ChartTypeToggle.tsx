@@ -1,14 +1,14 @@
 import React from 'react';
 import { BarChart, LineChart, PieChart } from 'lucide-react';
-import { ChartType } from '@/app/types/widget';
+import { IWidget, wtypes } from '@/app/lib/drizzle/schemas';
 
 interface ChartTypeToggleProps {
-  currentChart: ChartType;
-  onChange: (type: ChartType) => void;
+  currentChart: IWidget['type'];
+  onChange: (type: IWidget['type']) => void;
 }
 
 const ChartTypeToggle: React.FC<ChartTypeToggleProps> = ({ currentChart, onChange }) => {
-  const charts: ChartType[] = ['bar', 'line', 'pie'];
+  const charts = wtypes.filter((type) => type !== 'count');
   
   const icons = {
     bar: BarChart,

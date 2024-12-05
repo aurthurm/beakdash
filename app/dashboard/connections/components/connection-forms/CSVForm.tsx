@@ -1,9 +1,10 @@
+import { IConnection } from "@/app/lib/drizzle/schemas";
 import { Input } from "@/app/ui/components/input";
 import { Label } from "@/app/ui/components/label";
 
 interface CSVFormProps {
-  form: any;
-  setForm: (form: any) => void;
+  form: IConnection;
+  setForm: (form: IConnection) => void;
 }
 
 export function CSVForm({ form, setForm }: CSVFormProps) {

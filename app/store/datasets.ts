@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { Dataset } from '../types/datasource';
+import { IDataset } from '../lib/drizzle/schemas';
 
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
 interface DatasetState {
-  datasets: Dataset[];
+  datasets: IDataset[];
   activeDatasetId: string | null;
   loading: Record<string, boolean>;
   error: Record<string, string | null>;
@@ -13,8 +13,8 @@ interface DatasetState {
   fetchDatasets: (connectionId: string) => Promise<void>;
   fetchDataset: (id: string) => Promise<void>;
   fetchDatasetData: (id: string) => Promise<void>;
-  addDataset: (dataset: Omit<Dataset, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateDataset: (id: string, dataset: Partial<Dataset>) => Promise<void>;
+  addDataset: (dataset: Omit<IDataset, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateDataset: (id: string, dataset: Partial<IDataset>) => Promise<void>;
   deleteDataset: (id: string) => Promise<void>;
   setActiveDataset: (id: string | null) => void;
   clearError: (key: string) => void;
@@ -53,9 +53,7 @@ export const useDatasetStore = create<DatasetState>()(
             const data = await response.json();
             
             set(state => ({
-              datasets: connectionId
-                ? [...state.datasets.filter(ds => ds.connectionId !== connectionId), ...data]
-                : data,
+              datasets: [...data],
               loading: { ...state.loading, [connectionId]: false }
             }));
           } catch (error) {

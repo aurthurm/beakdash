@@ -1,9 +1,9 @@
 'use client';
 
-import WidgetGrid from '@/app/ui/components/widgets/WidgetGrid';
+import WidgetGrid from '@/app/dashboard/components/widgets/WidgetGrid';
 import { useSession } from 'next-auth/react';
 import { usePageStore } from '@/app/store/pageStore'
-import { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 // import { redirect } from "next/navigation";
 
 export default function Dashboard() {
@@ -35,7 +35,7 @@ export default function Dashboard() {
         console.log('You must be logged in to fetch pages');
         return;
       }
-      fetchPages(session?.user?.id!)
+      fetchPages(session.user?.id)
     })();
   }, [session?.user?.id]);
 
