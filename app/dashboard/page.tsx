@@ -4,12 +4,13 @@ import WidgetGrid from '@/app/dashboard/components/widgets/WidgetGrid';
 import { useSession } from 'next-auth/react';
 import { usePageStore } from '@/app/store/pageStore'
 import { useEffect, useState } from 'react';
+import { IPage } from '../lib/drizzle/schemas';
 // import { redirect } from "next/navigation";
 
 export default function Dashboard() {
   const { data: session } = useSession()
-  const { pages, fetchPages } = usePageStore()
-  const [activeMenu, setActiveMenu] = useState({})
+  const { pages } = usePageStore()
+  const [activePage, setActivePage] = useState({} as IPage);
 
   // if (!session) {
   //   redirect("/login");
@@ -18,32 +19,22 @@ export default function Dashboard() {
   useEffect(() => {
     pages.forEach(item => {
       if(item.active) {
-        setActiveMenu(item);
+        setActivePage(item);
       } else {
         if(item.subpages) {
           item.subpages?.forEach(sp => {
-            setActiveMenu(sp);
+            setActivePage(sp);
           })
         }
       }
     });
   }, [pages]);
 
-  useEffect(() => {
-    (async () => {
-      if(!session?.user?.id) {
-        console.log('You must be logged in to fetch pages');
-        return;
-      }
-      fetchPages(session.user?.id)
-    })();
-  }, [session?.user?.id]);
-
   return (
     <div className="flex-1 overflow-auto">
       {/* max-w-7xl  */}
       <div className="mx-auto">
-        <WidgetGrid menuItem={activeMenu} />
+        <WidgetGrid page={activePage} />
       </div>
     </div>
   );

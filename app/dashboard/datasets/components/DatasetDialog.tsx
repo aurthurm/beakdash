@@ -12,7 +12,7 @@ interface DatasetDialogProps {
     editingDataset: IDataset | null;
     onSave: () => void;
     form: IDataset;
-    setForm: (form: Partial<IDataset>) => void;
+    setForm: (form: IDataset) => void;
   }
   
   export function DatasetDialog({

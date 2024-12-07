@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import 'dotenv/config';
 import { eq } from 'drizzle-orm';
-import { connectionsTable, connectionSchema } from '@/app/lib/drizzle/schemas';
+import { widgetsTable, widgetSchema } from '@/app/lib/drizzle/schemas';
 import { db } from '@/app/lib/drizzle';
 
 
@@ -12,11 +12,11 @@ export async function PATCH(
   try {
     const body = await request.json();
     const { id } = await params;
-    const validated = connectionSchema.parse(body);
+    const validated = widgetSchema.parse(body);
 
-    const data = await db.update(connectionsTable)
+    const data = await db.update(widgetsTable)
     .set({ ...validated, updatedAt: new Date() })
-    .where(eq(connectionsTable.id, id))
+    .where(eq(widgetsTable.id, id))
     .returning();
   
     if (!data.length) {
@@ -25,7 +25,7 @@ export async function PATCH(
     return NextResponse.json(data[0]);
 
   } catch (error) {
-    console.error("[CONNECTION_PATCH]", error);
+    console.error("[WIDGET_PATCH]", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -41,12 +41,12 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    await db.delete(connectionsTable)
-    .where(eq(connectionsTable.id, id))
+    await db.delete(widgetsTable)
+    .where(eq(widgetsTable.id, id))
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[CONNECTION_DELETE]", error);
+    console.error("[WIDGET_DELETE]", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/app/ui/components/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
-import { AggregationMethod, TransformConfig } from '@/app/types/data';
+import { Aggregation, AggregationMethod, TransformConfig } from '@/app/types/data';
 import { IWidget } from '@/app/lib/drizzle/schemas';
 
 interface ChartConfigPanelProps {
@@ -27,107 +27,19 @@ interface ChartConfigPanelProps {
 }
 
 const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setForm }) => {
-  const [chartType, setChartType] = useState<IWidget['type']>(form.type);
+  const [chartType, setChartType] = useState<IWidget['type']>(form.type || 'bar');
   const [config, setConfig] = useState<TransformConfig>(form?.transformConfig || null);
 
-  // Generic handlers
   const onChartTypeChange = (type: IWidget['type']) => {
     setChartType(type);
-    
-    // Preserve existing configuration while changing type
-    const newConfig = { ...config };
-    if (!newConfig.series) newConfig.series = [{}];
-
-    // Preserve x-axis/category and y-axis/value when switching between chart types
-    if (type === 'pie') {
-      // When switching to pie chart
-      newConfig.series[0] = {
-        ...newConfig.series[0],
-        nameKey: newConfig.series[0].categoryKey || newConfig.series[0].nameKey,
-        valueKey: newConfig.series[0].valueKey
-      };
-      delete newConfig.series[0].categoryKey;
-    } else {
-      // When switching to bar/line chart
-      newConfig.series[0] = {
-        ...newConfig.series[0],
-        categoryKey: newConfig.series[0].nameKey || newConfig.series[0].categoryKey,
-        valueKey: newConfig.series[0].valueKey
-      };
-      delete newConfig.series[0].nameKey;
-    }
-
-    // Keep other configurations
-    newConfig.rotateLabels = config?.rotateLabels ?? 0;
-    newConfig.aggregation = config?.aggregation || {
-      enabled: false,
-      method: 'none' as AggregationMethod,
-      groupBy: []
-    };
-
-    setConfig(newConfig);
-    setForm({ ...form, type, transformConfig: newConfig });
+    setForm({...form, type });
   };
 
-  // Rest of the code remains the same...
-  const onBarLineAxisChange = (axis: 'x' | 'y', value: string) => {
-    const newConfig = { ...config };
-    if (!newConfig.series) newConfig.series = [{}];
-    
-    if (axis === 'x') {
-      newConfig.series[0].categoryKey = value;
-    } else {
-      newConfig.series[0].valueKey = value;
-    }
-    
-    updateConfig(newConfig);
-  };
-
-  const onPieChartConfigChange = (field: 'category' | 'value', value: string) => {
-    const newConfig = { ...config };
-    if (!newConfig.series) newConfig.series = [{}];
-    
-    if (field === 'category') {
-      newConfig.series[0].nameKey = value;
-      delete newConfig.series[0].categoryKey;
-    } else {
-      newConfig.series[0].valueKey = value;
-    }
-    
-    updateConfig(newConfig);
-  };
-
-  const onAggregationEnableChange = (enabled: boolean) => {
-    const newConfig = { ...config };
-    if (!newConfig.aggregation) newConfig.aggregation = { enabled: false, method: 'none', groupBy: [] };
-    newConfig.aggregation.enabled = enabled;
-    updateConfig(newConfig);
-  };
-
-  const onAggregationMethodChange = (method: AggregationMethod) => {
-    const newConfig = { ...config };
-    if (!newConfig.aggregation) newConfig.aggregation = { enabled: true, method: 'none', groupBy: [] };
-    newConfig.aggregation.method = method;
-    updateConfig(newConfig);
-  };
-
-  const onGroupByChange = (selectedGroups: string[]) => {
-    const newConfig = { ...config };
-    if (!newConfig.aggregation) newConfig.aggregation = { enabled: true, method: 'none', groupBy: [] };
-    newConfig.aggregation.groupBy = selectedGroups;
-    updateConfig(newConfig);
-  };
-
-  const onRotateLabelsChange = (rotation: number) => {
-    const newConfig = { ...config };
-    newConfig.rotateLabels = rotation;
-    updateConfig(newConfig);
-  };
-
-  const updateConfig = (newConfig: TransformConfig) => {
-    setConfig(newConfig);
-    setForm({ ...form, transformConfig: newConfig });
-  };
+  const onConfigChange = (config: TransformConfig) => {
+    console.log("onConfigChange config", config)
+    setConfig(config);
+    setForm({...form, transformConfig: config});
+  }
 
   return (
     <Tabs defaultValue="generic">
@@ -152,18 +64,18 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
 
       <TabsContent value="generic" className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">Chart Type</label>
-          <Select value={chartType} onValueChange={onChartTypeChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select chart type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bar">Bar Chart</SelectItem>
-              <SelectItem value="line">Line Chart</SelectItem>
-              <SelectItem value="pie">Pie Chart</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <label className="text-sm font-medium">Chart Type</label>
+            <Select value={chartType} onValueChange={onChartTypeChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select chart type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bar">Bar Chart</SelectItem>
+                <SelectItem value="line">Line Chart</SelectItem>
+                <SelectItem value="pie">Pie Chart</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
       </TabsContent>
 
       <TabsContent value="axes" className="space-y-4">
@@ -173,11 +85,18 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
           </label>
           <Select 
             value={chartType === 'pie' ? config?.series?.[0]?.nameKey : config?.series?.[0]?.categoryKey}
-            onValueChange={(val) => 
-              chartType === 'pie' 
-                ? onPieChartConfigChange('category', val)
-                : onBarLineAxisChange('x', val)
-            }
+            onValueChange={(val) => {
+              const newConfig = { ...form?.transformConfig };
+              if (!newConfig?.series) newConfig.series = [{}];
+              if (chartType === 'pie') {
+                newConfig.series[0].nameKey = val;
+                delete newConfig.series[0].categoryKey;
+              } else {
+                newConfig.series[0].categoryKey = val;
+                delete newConfig.series[0].nameKey;
+              }
+              onConfigChange(newConfig);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder={`Select ${chartType === 'pie' ? 'Category' : 'X-Axis'}`} />
@@ -196,11 +115,12 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
           </label>
           <Select 
             value={config?.series?.[0]?.valueKey}
-            onValueChange={(val) => 
-              chartType === 'pie'
-                ? onPieChartConfigChange('value', val)
-                : onBarLineAxisChange('y', val)
-            }
+            onValueChange={(val) => {
+              const newConfig = { ...form.transformConfig };
+              if (!newConfig.series) newConfig.series = [{}];
+              newConfig.series[0].valueKey = val;
+              onConfigChange(newConfig);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select Value" />
@@ -220,7 +140,10 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
             type="number" 
             className="w-full p-2 border rounded"
             value={config?.rotateLabels ?? 0}
-            onChange={(e) => onRotateLabelsChange(parseInt(e.target.value))}
+            onChange={(e) => onConfigChange({
+              ...form.transformConfig,
+              rotateLabels: parseInt(e.target.value)
+            })}
           />
         </div>
       </TabsContent>
@@ -231,7 +154,13 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
             <input 
               type="checkbox"
               checked={config?.aggregation?.enabled ?? false}
-              onChange={(e) => onAggregationEnableChange(e.target.checked)}
+              onChange={(e) => onConfigChange({
+                ...form.transformConfig,
+                aggregation: {
+                  ...config?.aggregation,
+                  enabled: e.target.checked
+                } as Aggregation
+              })}
             />
             <span>Enable Aggregation</span>
           </label>
@@ -243,7 +172,13 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
               <label className="text-sm font-medium">Method</label>
               <Select 
                 value={config?.aggregation.method}
-                onValueChange={(method: AggregationMethod) => onAggregationMethodChange(method)}
+                onValueChange={(method: AggregationMethod) => onConfigChange({
+                  ...form.transformConfig,
+                  aggregation: {
+                    ...config?.aggregation,
+                    method
+                  } as Aggregation
+                })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select aggregation" />
@@ -268,7 +203,13 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
                 value={config?.aggregation.groupBy}
                 onChange={(e) => {
                   const selected = Array.from(e.target.selectedOptions).map(opt => opt.value);
-                  onGroupByChange(selected);
+                  onConfigChange({
+                    ...form.transformConfig,
+                    aggregation: {
+                      ...config?.aggregation,
+                      groupBy: selected
+                    } as Aggregation
+                  });
                 }}
               >
                 {columns?.all?.map(col => (

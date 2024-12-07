@@ -75,8 +75,8 @@ export const connectionSchema = z.object({
   type: z.string().min(1),
   config: z.record(z.any()).optional(),
   userId: z.string().min(1),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional()
+  createdAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)).optional()
 }).strict();
 export type IConnection = z.infer<typeof connectionSchema>;
 
@@ -106,8 +106,8 @@ export const datasetsSchema = z.object({
   })).optional(),
   query: z.string().optional(),
   refreshInterval: z.number().optional(),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional()
+  createdAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)).optional()
 }).strict();
 export type IDataset = z.infer<typeof datasetsSchema>;
 
@@ -128,17 +128,32 @@ export const datasetsTable = pgTable("datasets", {
 export type SelectDataset = typeof datasetsTable.$inferSelect;
 export type InsertDataset = typeof datasetsTable.$inferInsert;
 
+// First define the base schema type
+interface PageSchemaType {
+  id?: string;
+  label: string;
+  route?: string;
+  icon: string;
+  active: boolean;
+  parentId?: string;
+  subpages?: PageSchemaType[];
+  userId: string;
+}
 
-export const pageSchema: z.ZodSchema = z.lazy(() => z.object({
+// Then create the schema with proper typing
+export const pageSchema: z.ZodType<PageSchemaType> = z.lazy(() => z.object({
   id: z.string().uuid().optional(),
   label: z.string().min(1),
-  route: z.string().optional(),
   icon: z.string(),
   active: z.boolean().default(false),
   parentId: z.string().uuid().optional(),
   subpages: z.array(pageSchema).optional(),
   userId: z.string().uuid(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)).optional()
 }).strict());
+
+// Export the inferred type
 export type IPage = z.infer<typeof pageSchema>;
 
 export const pagesTable = pgTable("pages", {
@@ -160,7 +175,7 @@ export const wtypes = ['count', 'line', 'pie', 'bar'] as const;
 export const widgetSchema = z.object({
   id: z.string().uuid().optional(),
   pageId: z.string().uuid(),
-  subPageId: z.string().uuid().optional(),
+  userId: z.string().uuid(),
   type: z.enum(wtypes),
   title: z.string().min(1),
   subtitle: z.string().optional(),
@@ -172,7 +187,10 @@ export const widgetSchema = z.object({
     h: z.number(),
   }),
   datasetId: z.string().uuid(),
-  transformConfig: z.record(z.any())
+  query: z.string().optional(),
+  transformConfig: z.record(z.any()),
+  createdAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)).optional()
 }).strict();
 export type IWidget = z.infer<typeof widgetSchema>;
 
@@ -185,7 +203,8 @@ export const widgetsTable = pgTable("widgets", {
   datasetId: varchar("dataset_id").references(() => datasetsTable.id).notNull(),
   transformConfig: jsonb("transform_config").notNull(),
   pageId: varchar("page_id").notNull(),
-  subPageId: varchar("subpage_id"),
+  userId: varchar("user_id").notNull(),
+  query: text("query"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });

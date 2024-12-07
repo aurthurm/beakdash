@@ -11,7 +11,7 @@ interface ConnectionState {
   error: string | null;
   lastFetch: number;
   fetchConnections: (userId: string) => Promise<void>;
-  fetchConnection: (id: string) => Promise<void>;
+  fetchConnection: (id: string) => Promise<IConnection>;
   addConnection: (connection: Omit<IConnection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateConnection: (id: string, connection: Partial<IConnection>) => Promise<void>;
   deleteConnection: (id: string) => Promise<void>;
@@ -56,6 +56,13 @@ export const useConnectionStore = create<ConnectionState>()(
         },
 
         fetchConnection: async (id) => {
+          // firt check if connection is already in store
+          const store = get();
+          const connection = store.connections.find(c => c.id === id);
+          if (connection) {
+            return connection;
+          }
+
           set({ loading: true, error: null });
           try {
             const response = await fetch(`/api/connections/${id}`);
@@ -68,6 +75,7 @@ export const useConnectionStore = create<ConnectionState>()(
               ],
               loading: false
             }));
+            return data;
           } catch (error) {
             set({ 
               error: error instanceof Error ? error.message : 'Unknown error',

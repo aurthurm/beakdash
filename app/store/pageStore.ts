@@ -6,13 +6,14 @@ import { IPage } from '../lib/drizzle/schemas';
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
 interface PageState {
-  pages: IPage[]
-  bottomPages: IPage[]
-  setActive: (pages: IPage, subpage?: IPage, bottom?: boolean) => void
-  addPage: (pages : IPage) => void
-  fetchPages: (userId: string) => void
-  addSubPage: (pages: IPage, subpage : IPage) => void,
-  lastFetch: number
+  pages: IPage[];
+  bottomPages: IPage[];
+  setActive: (pages: IPage, subpage?: IPage, bottom?: boolean) => void;
+  addPage: (pages : IPage) => void;
+  fetchPages: (userId: string) => Promise<IPage[]>;
+  addSubPage: (pages: IPage, subpage : IPage) => void;
+  seedDashboard: (userId: string) => void;
+  lastFetch: number;
 }
 
 
@@ -20,13 +21,7 @@ export const usePageStore = create<PageState>()(
   devtools(
     persist(
       (set, get) => ({
-        pages: [{ 
-            icon: 'LayoutDashboard', 
-            label: 'Dashboard', 
-            route: '/dashboard',
-            active: true,
-            userId: ''
-        }],
+        pages: [],
         bottomPages: [
           { 
               icon: 'Database', 
@@ -98,7 +93,7 @@ export const usePageStore = create<PageState>()(
             store.pages.length > 1 && 
             now - store.lastFetch < CACHE_TIME
           ) {
-            return;
+            return store.pages;
           } 
           set({ lastFetch: now });
 
@@ -106,12 +101,22 @@ export const usePageStore = create<PageState>()(
             const response = await fetch(`/api/pages?userId=${userId}`);
             if (!response.ok) throw new Error('Failed to fetch pages');
             const data = await response.json();
-            set(state => ({
-              pages: [state.pages[0], ...data.map((page: IPage) => ({...page, active: false}))],
-            }));
+            set({
+              pages: data
+                .map((page: IPage) => ({...page, active: false}))
+                .sort((a: IPage, b: IPage) => {
+                  // Put Dashboard first
+                  if (a.label === 'Dashboard') return -1;
+                  if (b.label === 'Dashboard') return 1;
+                  // For all other pages, maintain original order
+                  return 0;
+                }),
+            });
+            return data as IPage[];
           } catch (error) {
             console.error(error)
           }
+          return [];
         },
         addPage: async (page) => {
           try {
@@ -140,6 +145,30 @@ export const usePageStore = create<PageState>()(
                 return menu;
             }) 
           }))
+        },
+        seedDashboard: async (userId: string) => {
+          const seeds = [
+            { 
+              icon: 'LayoutDashboard', 
+              label: 'Dashboard',
+              active: true,
+              userId
+            }
+          ]
+          try {
+            await Promise.all(seeds.map(async seed => {
+              const response = await fetch('/api/pages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(seed)
+              });
+              if (!response.ok) throw new Error('Failed to add page');
+              const data = await response.json();
+              set((state) => ({ pages: [data, ...state.pages] }))
+            }))
+          } catch (error) {
+            console.error(error)
+          }
         }
       }),
       {

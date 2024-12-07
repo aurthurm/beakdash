@@ -1,17 +1,17 @@
 import { NextRequest } from 'next/server';
-import { Pool } from 'pg';
+import { Client, ClientConfig } from 'pg';
 
 interface DataBaseRequest {
-  connectionString: string;
+  config: ClientConfig;
   query: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { connectionString, query } = await request.json() as DataBaseRequest;
+    const { config, query } = await request.json() as DataBaseRequest;
 
     // Validate connection parameters
-    if (!connectionString || !query) {
+    if (!config || !query) {
       return Response.json(
         { error: 'Missing required parameters' },
         { status: 400 }
@@ -19,19 +19,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Create a new pool for this specific request
-    const pool = new Pool({ connectionString });
+    const client = new Client({
+      ...config,
+      statement_timeout: 5000,
+      connectionTimeoutMillis: 5000,
+    });
      
     try {
       // Execute query
-      const result = await pool.query(query);
+      await client.connect();
+      const result = await client.query(query);
       
       // Important: Close the pool after use
-      await pool.end();
+      await client.end();
       
       return Response.json(result.rows);
     } catch (dbError) {
       // Make sure to close the pool even if query fails
-      await pool.end();
+      await client.end();
       throw dbError;
     }
   } catch (error) {

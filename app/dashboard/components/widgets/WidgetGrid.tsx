@@ -11,40 +11,30 @@ import AICopilotButton from '@/app/dashboard/components/AICopilot/AICopilotButto
 import AICopilotChat from '@/app/dashboard/components/AICopilot/AICopilotChat';
 import { useWidgetStore } from '@/app/store/widgetStore';
 import { IPage, IWidget } from '@/app/lib/drizzle/schemas';
+import { useWidget } from '../../hooks/useWidget';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const WidgetGrid = ({ page }: { page: IPage }) => {
-  const { widgets, addWidget, updateWidget } = useWidgetStore();
+  const { widgets, updateWidget } = useWidgetStore();
   const [menuWidgets, setMenuWidgets] = useState<IWidget[]>([]);
   const [layouts, setLayouts] = useState({});
-  const [isAddWidgetOpen, setIsAddWidgetOpen] = useState(false);
+  const {isOpen, setIsOpen, isEditingWidget,form, setForm, handlers} = useWidget()
 
   useEffect(() => {
     // Filter widgets belonging to the current menu item
-    const wgts: IWidget[] = widgets.filter((w) => w.pageId === page.label);
+    const wgts: IWidget[] = widgets.filter((w) => w.pageId === page.id);
     setMenuWidgets(wgts);
     const llll = { lg: wgts?.map(w => ({...w.layout, i: w.id})) }
     setLayouts(llll)
   }, [widgets, page]);
 
-  const handleAddWidget = (widget: IWidget) => {
-    addWidget({
-      ...widget,
-      pageId: page.label,
-    });
-    setIsAddWidgetOpen(false);
-  };
-
-  const handleEditWidget = (id: string, updates: Partial<IWidget>) => {
-    updateWidget(id, updates);
-  };
-
   const handleLayoutChange = (layout: any, updated: any) => {
     setLayouts(updated);
     if(updated?.lg) {
       for(const lay of updated.lg){
-        updateWidget(lay.i, {layout: lay})
+        const widget = menuWidgets.find(w => w.id === lay.i)
+        if(widget) updateWidget(widget.id!, {...widget, layout: lay})
       }
     };
   };
@@ -56,7 +46,7 @@ const WidgetGrid = ({ page }: { page: IPage }) => {
         <div className="flex gap-2">
           <AICopilotButton variant='button' />
           <button
-            onClick={() => setIsAddWidgetOpen(true)}
+            onClick={() => setIsOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
             <Plus size={20} />
@@ -76,16 +66,24 @@ const WidgetGrid = ({ page }: { page: IPage }) => {
       >
         {menuWidgets.map((widget) => (
           <div key={widget.id} id={widget.id} className="bg-white rounded-xl shadow-sm">
-            <WidgetVisual widget={widget} />
+            <WidgetVisual 
+              widget={widget} 
+              onEdit={handlers.handleEdit} 
+              onDelete={handlers.handleDelete} 
+              onUpdate={handlers.handleUpdate} 
+            />
           </div>
         ))}
       </ResponsiveGridLayout>
 
-      <WidgetEditorModal
-        isOpen={isAddWidgetOpen}
-        mode="add"
-        widget={{} as IWidget}
-        onClose={() => setIsAddWidgetOpen(false)}
+      <WidgetEditorModal 
+          page={page}
+         isOpen={isOpen}
+         setIsOpen={setIsOpen}
+         isEditingWidget={isEditingWidget}
+         form={form}
+         setForm={setForm}
+         handlers={handlers}
       />
 
       <AICopilotChat />

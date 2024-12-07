@@ -1,28 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Settings, Grip, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
-import WidgetEditorModal from '@/app/dashboard/components/widgets/widget-editor/WidgetEditorModal';
-import { useWidgetStore } from '@/app/store/widgetStore';
+import { Settings, Grip, Trash2 } from 'lucide-react';
 import ChartTypeToggle from '@/app/dashboard/components/widgets/ChartTypeToggle';
-import { useDataSource } from '@/app/lib/hooks/useDataSource';
+import { useDataSet } from '@/app/lib/hooks/useDataSet';
 import AICopilotButton from '@/app/dashboard/components/AICopilot/AICopilotButton';
 import { WidgetError } from '@/app/dashboard/components/widgets/states/WidgetError';
 import { WidgetSkeleton } from '@/app/dashboard/components/widgets/states/WidgetSkeleton';
 import { getChartOptions } from '@/app/lib/charts/chart-options';
-import { DataPoint } from '@/app/types/data';
 import { IWidget } from '@/app/lib/drizzle/schemas';
 
 interface WidgetProps {
   widget: IWidget;
+  onEdit: (widget: IWidget) => void;
+  onDelete: (id: string) => void;
+  onUpdate: (id: string, data: Partial<IWidget>) => void;
 }
 
-const WidgetVisual: React.FC<WidgetProps> = ({ widget }) => {
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const { updateWidget, removeWidget } = useWidgetStore();
-  const [editorData, setEditorData] = useState<DataPoint[]>([]);
-  const { data, loading, error } = useDataSource(widget.datasetId); 
+const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdate }) => {
+  const { data, loading, error } = useDataSet(widget); 
 
   const isChart = widget.type !== 'count';
 
@@ -30,37 +27,24 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget }) => {
     return <WidgetSkeleton type={widget.type} />;
   }
 
-  const handleOpenEditor = () => {
-    setEditorData(data);
-    setIsEditOpen(true);
+  const handleEdit = () => {
+    onEdit(widget)
   };
   
-  const handleCloseEditor = () => {
-    setIsEditOpen(false);
-    setEditorData(null);
-  };
-
   if (error) {
     return (<>
-      <WidgetEditorModal
-        isOpen={isEditOpen}
-        mode="edit"
-        onClose={() => setIsEditOpen(false)}
-        widget={widget}
-        initData={editorData}
-      />
       <WidgetError
         message={error.message}
         onRetry={() => window.location.reload()}
-        onEdit={() => setIsEditOpen(true)}
+        onEdit={() => handleEdit()}
       />
     </>);
   }
 
   const getEChartOptions = () => getChartOptions(widget, data)
 
-  const handleChartTypeChange = (chart: ChartType) => {
-    updateWidget(widget.id, { type: { visual: 'chart', chart } });
+  const handleUpdate = (type: IWidget['type']) => {
+    onUpdate(widget.id!, { type });
   };
 
   return (
@@ -81,17 +65,17 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget }) => {
           {isChart && (
             <ChartTypeToggle
               currentChart={widget.type!}
-              onChange={handleChartTypeChange}
+              onChange={handleUpdate}
             />
           )}
           <button
-            onClick={() => handleOpenEditor()}
+            onClick={() => handleEdit()}
             className="p-2 hover:bg-gray-100 rounded-lg"
           >
             <Settings size={20} />
           </button>
           <button
-            onClick={() => removeWidget(widget.id)}
+            onClick={() => onDelete(widget.id!)}
             className="p-2 hover:bg-gray-100 rounded-lg"
           >
             <Trash2 size={20} />
@@ -114,35 +98,22 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget }) => {
           />
         ) : (
           <div className="mt-4">
-            <div className="text-3xl font-bold">{widget.data.value}</div>
-            {widget.data.change && (
+            <p>number here</p>
+            {/* <div className="text-3xl font-bold">{form.data.value}</div>
+            {form.data.change && (
               <div className={`flex items-center gap-1 mt-2 ${
-                widget.data.change > 0 ? 'text-green-500' : 'text-red-500'
+                form.data.change > 0 ? 'text-green-500' : 'text-red-500'
               }`}>
-                {widget.data.change > 0 ? (
+                {form.data.change > 0 ? (
                   <TrendingUp size={16} />
                 ) : (
                   <TrendingDown size={16} />
                 )}
-                <span>{Math.abs(widget.data.change)}%</span>
+                <span>{Math.abs(form.data.change)}%</span>
               </div>
-            )}
+            )} */}
           </div>
         )}
-
-        <WidgetEditorModal
-          isOpen={isEditOpen}
-          mode="edit"
-          initData={editorData}
-          onClose={() => handleCloseEditor()}
-          widget={{
-            ...widget,
-            dataSource: {
-              ...widget.dataSource,
-              ...overrides.dataSource
-            }
-          }}
-        />
       </div>
     </div>
   );

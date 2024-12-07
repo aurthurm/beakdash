@@ -1,28 +1,30 @@
 import { DataAdapter } from '@/app/types/adapter';
-import { SQLDataSource } from '@/app/types/datasource';
+import { SQLConnectionConfig } from '@/app/types/datasource';
 
 export class SQLAdapter implements DataAdapter {
-  constructor(private config: SQLDataSource) {}
+  constructor(private config: SQLConnectionConfig) {}
 
   async initialize(): Promise<void> {
     // No initialization needed for API calls
   }
 
-  async fetchData(): Promise<any[]> {
-    console.log("this.config: ", this.config);
+  async fetchData(query: string): Promise<any[]> {
+    console.log("SQLAdapter config", this.config);
+    console.log("SQLAdapter query", query);
     const response = await fetch('/api/data-sources', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: this.config.query,
-        connectionString: this.config.connectionString,
+        query,
+        config: this.config,
       }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch data');
+      const data = await response.json();
+      throw new Error(data?.details || data?.error || 'Failed to fetch data');
     }
 
     return response.json();

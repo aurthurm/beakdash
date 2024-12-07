@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   ChevronDown,
@@ -9,16 +9,36 @@ import {
 import { usePageStore } from '@/app/store/pageStore'
 import { IPage } from '@/app/lib/drizzle/schemas';
 import { renderIcon } from '@/app/ui/components/icons/Icon';
+import { useSession } from 'next-auth/react';
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
 const Sidebar = ({ isOpen }: SidebarProps) => {  
+  const { data: session } = useSession()
   const router = useRouter();
   const pathname = usePathname();
-  const { setActive, pages, bottomPages } = usePageStore()
+  const { setActive, pages, bottomPages, fetchPages, seedDashboard } = usePageStore()
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+
+  useEffect(() => {
+    if(!session?.user?.id) {
+      console.log('You must be logged in to fetch pages');
+      return;
+    }
+    const userId = session.user?.id;
+    fetchPages(userId).then( async (data) => {
+      if(data.length == 0) {
+        await seedDashboard(userId);
+      } else {
+        const dashboardPage = data.find((item: IPage) => item.label == 'Dashboard');
+        if(!dashboardPage) {
+          await seedDashboard(userId);
+        }
+      }
+    });
+  }, [session?.user?.id]);
 
   const toggleSubmenu = (menu: IPage) => {
     if (menu.subpages) {
@@ -71,7 +91,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       {/* {isOpen && <div className="text-gray-500 text-sm px-4 mb-2">HOME</div>} */}
 
       <nav className="flex-1 overflow-y-auto">
-        <div className="px-2">
+        {pages.length == 0 && <div className="flex items-center justify-center h-full">Loading Pages...</div>}
+        {pages.length > 0 && <div className="px-2">
           {pages.map((item, index) => (
             <div key={index}>
               <div
@@ -113,7 +134,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               )}
             </div>
           ))}
-        </div>
+        </div>}
       </nav>
       <nav className="border-t pt-1">
         <div className="px-2">

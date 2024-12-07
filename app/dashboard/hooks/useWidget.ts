@@ -1,93 +1,69 @@
-import { IConnection } from '@/app/lib/drizzle/schemas';
-import { useConnectionStore } from '@/app/store/connections';
-import { SQLConnection, ConnectionType, SQLConnectionConfig } from '@/app/types/datasource';
+import { IWidget } from '@/app/lib/drizzle/schemas';
+import { useWidgetStore } from '@/app/store/widgetStore';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
 export function useWidget() {
+    const [isOpen, setIsOpen] = useState(false);
     const { data: session } = useSession()
-    const { loading, addConnection, updateConnection, deleteConnection } = useConnectionStore();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingConnection, setEditingConnection] = useState<IConnection | null>(null);
-    const [isTesting, setIsTesting] = useState(false);
-    const [testStatus, setTestStatus] = useState({ success: false, message: '' });
+    const { addWidget, updateWidget, deleteWidget } = useWidgetStore();
+    const [isEditingWidget, setIsEditingWidget] = useState(false);
   
-    // Form states
-    const [csvForm, setCsvForm] = useState<SQLConnectionConfig>({ driver: 'postgresql' });
-    const [sqlForm, setSqlForm] = useState<SQLConnection>({config: {}} as SQLConnection);
-    const [restForm, setRestForm] = useState({});
+    const [form, setForm] = useState<IWidget>({
+      title: '',
+      subtitle: '',
+      datasetId: '',
+    } as IWidget);
   
-    // All your handlers
-    const handleSave = async (connectionType: ConnectionType) => {
+    const handleSave = async (pageId: string) => {
       if(!session?.user?.id) {
-        alert('You must be logged in to save a connection');
+        console.error('User not authenticated - cannot save widget');
         return;
-      };
-      switch (connectionType) {
-        case 'sql':
-          if (editingConnection) {
-            await updateConnection(editingConnection.id!, {
-              ...sqlForm, 
-              type: connectionType,
-              userId: session?.user?.id
-            } as IConnection);
-          } else {
-            await addConnection({
-              ...sqlForm, 
-              type: connectionType,
-              userId: session?.user?.id,
-            });
-          }
-          break;
-        default:
-          break;
       }
-      setIsDialogOpen(false);
+      if(!pageId) {
+        console.error('No pageId provided - cannot save widget');
+        return;
+      }
+      const payload = { 
+        ...form, 
+        userId: session.user.id,
+        pageId
+      } as IWidget;
+
+      if(isEditingWidget && form.id) {
+        await updateWidget(form.id, payload);
+      } else {
+        await addWidget(payload);
+      }
+      
+      // Reset form
+      setForm({
+        title: '',
+        subtitle: '',
+        datasetId: '',
+      } as IWidget);
+      setIsOpen(false);
     };
 
-    const handleTest = async (connectionType: ConnectionType) => { 
-      setIsTesting(true)
-      switch (connectionType) {
-        case 'sql':
-          const response = await fetch("/api/connections/test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(sqlForm.config),
-          })
-          const result = await response.json();
-          setTestStatus(result);
-          break;
-        default:
-          break;
-      }
-      setIsTesting(false);
-    };
-
-    const handleEdit = (connection: IConnection) => { 
-      setEditingConnection(connection);
-      switch (connection.type) {
-        case 'sql':
-          setSqlForm(connection as SQLConnection);
-          break;
-        default:
-          break;
-      }
-      setIsDialogOpen(true);
+    const handleEdit = (widget: IWidget) => { 
+      setIsEditingWidget(true);
+      setForm(widget)
     };
 
     const handleDelete = async (id: string) => { 
-      await deleteConnection(id);
+      await deleteWidget(id);
+    };
+
+    const handleUpdate = async (id: string, data: Partial<IWidget>) => {
+      await updateWidget(id, data);
     };
   
     return {
-      isDialogOpen,
-      setIsDialogOpen,
-      editingConnection,
-      testStatus,
-      isTesting,
-      loading,
-      forms: { csv: csvForm, sql: sqlForm, rest: restForm },
-      setForms: { setCsvForm, setSqlForm, setRestForm },
-      handlers: { handleSave, handleTest, handleEdit, handleDelete },
+      isOpen, 
+      setIsOpen,
+      isEditingWidget,
+      form,
+      setForm,
+      handlers: { handleSave, handleEdit, handleDelete, handleUpdate },
     };
   }

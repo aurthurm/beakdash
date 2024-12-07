@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ReactECharts from 'echarts-for-react';
+import ReactECharts, { EChartsOption } from 'echarts-for-react';
 import {
   LineChart, SaveAll, Table, X, Zap,
   Settings, ArrowLeft,
@@ -14,11 +14,15 @@ import { format, FormatOptionsWithLanguage } from 'sql-formatter';
 import DataExplorer from '@/app/dashboard/components/DataExplorer';
 import { DataPoint } from '@/app/types/data';
 import ChartConfigPanel from '@/app/dashboard/components/widgets/widget-editor/ChartConfigPanel';
-import ChartConnectionPanel from '@/app/dashboard/components/widgets/widget-editor/ChartConnectionPanel';
+import DatasetPanel from '@/app/dashboard/components/widgets/widget-editor/DatasetPanel';
 import { getChartOptions } from '@/app/lib/charts/chart-options';
-import { useWidgetStore } from '@/app/store/widgetStore';
 import { SQLAdapter } from '@/app/lib/adapters/sql';
-import { IWidget } from '@/app/lib/drizzle/schemas';
+import { IConnection, IDataset, IPage, IWidget } from '@/app/lib/drizzle/schemas';
+import { Alert, AlertDescription } from '@/app/ui/components/alert';
+import { useDatasetStore } from '@/app/store/datasets';
+import { useSession } from 'next-auth/react';
+import { useConnectionStore } from '@/app/store/connections';
+import { SQLConnectionConfig } from '@/app/types/datasource';
 
 const SQL_FORMAT_OPTIONS = {
   language: 'postgresql', // or 'mysql', 'sqlite', etc.
@@ -27,55 +31,81 @@ const SQL_FORMAT_OPTIONS = {
   indentStyle: 'standard',
 } as FormatOptionsWithLanguage;
 
-
 interface WidgetModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  mode: 'add' | 'edit';
-  widget: IWidget;
+  page: IPage;
   initData?: DataPoint[];
+  isOpen: boolean;
+  setIsOpen: (val: boolean) => void;
+  isEditingWidget: boolean;
+  form: IWidget;
+  setForm: (widget: IWidget) => void;
+  handlers: any;
 }
 
 const WidgetEditorModal: React.FC<WidgetModalProps> = ({
+  page,
   isOpen,
-  onClose,
-  mode,
-  widget,
-  initData
+  setIsOpen,
+  isEditingWidget,
+  form,
+  setForm,
+  handlers
 }) => {
+  const { data: session } = useSession()
   const [mounted, setMounted] = useState(false);
-  const { addWidget, updateWidget } = useWidgetStore();
-  const [data, setData] = useState<DataPoint[]>(initData ?? []);
-  const [specifics, setSpecifics] = useState<IWidget>(widget); // manage update/new locally
-  const [title, setTitle] = useState('');
-  const [subtitle, setSubtitle] = useState('');
+  const [data, setData] = useState<DataPoint[]>([]);
   const [activePanel, setActivePanel] = useState<'connection' | 'chart'>('connection');
-  const [sqlQuery, setSqlQuery] = useState('');
-  
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
+  const [activeDataView, setActiveDataView] = useState<'query' | 'table' | 'chart'>('query');
+  const { datasets, fetchDatasets } = useDatasetStore();
+  const [ dataset, setDataset] = useState<IDataset | null>(null);
+  const { connections, fetchConnections } = useConnectionStore();
+  const [ connection, setConnection] = useState<IConnection | null>(null);
+  const [executionStatus, setExecutionStatus] = useState<{ success: boolean, message: string }>({ success: true, message: '' });
+  const [isExecuting, setIsExecuting] = useState(false);
 
   useEffect(() => {
-    if (mode === 'edit' && widget) {
-      setTitle(widget.title);
-      setSubtitle(widget.subtitle || '');
-      // if(widget.data?.type === 'sql') {
-      //   setSqlQuery((widget.dataSource as SQLDataSource).query ?? '');
-      // }
+    if(!session?.user?.id) {
+      console.log('You must be logged in to fetch datasets');
+      return;
     }
-  }, [mode, widget]);
+    fetchConnections(session.user?.id)
+    fetchDatasets(session.user?.id)
+  },[session?.user?.id]);
+
+  const onUpdateDataset = (datasetId: string) => {
+    setForm({ ...form, datasetId });
+    const dataset = datasets.find(d => d.id === datasetId);
+    setDataset(dataset || null);
+    const connection = connections.find(c => c.id === dataset?.connectionId)
+    setConnection(connection || null);
+  };
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  useEffect(() => {
+    // if (mode === 'edit' && form) {
+    //   // if(form.data?.type === 'sql') {
+    //   //   setSqlQuery((form.dataSource as SQLDataSource).query ?? '');
+    //   // }
+    // }
+  }, [form]);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  const updateForm = (updates: Partial<IWidget>) => {
+    setForm({...form, ...updates})
+  }
 
   if (!isOpen || !mounted) return null;
 
-
   const getColumns = () => {
+    if (!data || data.length === 0) return { all: [], numeric: [], nonNumeric: [] };
     const allColumns = data ? Object.keys(data[0]) : [];
     const numericCols = allColumns.filter(col => {
       // Get first non-null value
@@ -100,60 +130,43 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
     }
   };
 
-  const getEChartOptions = () => getChartOptions(specifics, data ?? [])
+  const getEChartOptions = () => getChartOptions(form, data ?? [])
 
   const handleFormat = () => {
     try {
-      setSqlQuery(format(sqlQuery, SQL_FORMAT_OPTIONS));
+      updateForm({ query: format(form.query ?? '', SQL_FORMAT_OPTIONS) });
     } catch (error) {
       console.error('SQL formatting error:', error);
     }
   };
 
   const executeQuery = async () => {
-    const adapter = new SQLAdapter({
-      ...specifics.dataSource,
-      query: sqlQuery
-    } as SQLDataSource);
-    const fetchedData = await adapter.fetchData();
-    console.log("fetchedData: ", fetchedData);
-    setData(fetchedData);
+    setIsExecuting(true);
+    try {
+      const adapter = new SQLAdapter(connection?.config as SQLConnectionConfig);
+      const fetchedData = await adapter.fetchData(form.query!);
+      setData(fetchedData);
+      setExecutionStatus({ success: true, message: '' });
+      setActiveDataView('table');
+    } catch (error) {
+      setExecutionStatus({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'An unexpected error occurred' 
+      });
+    }
+    setIsExecuting(false);
   }
-
-  const handleUpdates = (updates: Partial<Widget>) => {
-    setSpecifics({
-      ...specifics,
-      ...updates
-    });
-  };
-
-  const handleSaveWidget = () => {
-    const payload = {
-      ...specifics,
-      title,
-      subtitle,
-      dataSource: {
-        ...widget.dataSource,
-        query: sqlQuery,
-      }
-    } as Widget;
-    if (mode === 'add') {
-      addWidget(payload)
-     } else {
-      updateWidget(widget.id, payload)
-     }
-     // close modal after saving
-     onClose();
-  };
 
   return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 w-[90%] h-[90%] flex flex-col">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold capitalize">{mode} Widget</h2>
+          <h2 className="text-xl font-semibold capitalize">
+            {isEditingWidget ? 'Edit Widget' : 'Create New Widget'}
+          </h2>
           <button 
           aria-label='Close Modal'
-          onClick={onClose} 
+          onClick={() => setIsOpen(false)} 
           className="p-2 hover:bg-gray-100 rounded-lg">
             <X size={20} />
           </button>
@@ -163,7 +176,12 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
           {/* Left Panel */}
           <div className="w-1/3 border-r pr-6">
             {activePanel === 'connection' ? (
-              <ChartConnectionPanel widget={specifics} onUpdate={handleUpdates} />
+              <DatasetPanel 
+              form={form} 
+              datasets={datasets} 
+              dataset={dataset} 
+              onUpdateDataset={onUpdateDataset}
+              />
             ) : (<>
               <button
                 onClick={() => setActivePanel('connection')}
@@ -173,9 +191,9 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
                 Back to Connection Settings
               </button>
               <ChartConfigPanel 
-              widget={specifics}
+              form={form}
               columns={getColumns()}
-              onUpdate={handleUpdates} />
+              setForm={setForm} />
             </>)}
           </div>
 
@@ -185,8 +203,8 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
               <label className="block text-md font-medium mb-1 w-24">Title</label>
               <input
                 type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={form.title}
+                onChange={(e) => updateForm({ title: e.target.value})}
                 className="w-full p-1 border rounded-sm outline-none"
                 placeholder="Widget Title"
               />
@@ -196,8 +214,8 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
               <label className="block text-md font-medium mb-1 w-24">Subtitle</label>
               <input
                 type="text"
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
+                value={form.subtitle}
+                onChange={(e) => updateForm({ subtitle: e.target.value})}
                 className="w-full p-1 border rounded-sm outline-none"
                 placeholder="Widget Subtitle"
               />
@@ -205,50 +223,12 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
 
             <hr className='my-4' />
 
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium">SQL Query</label>
-                <div className="flex justify-start items-center gap-x-2">
-                  <button 
-                    onClick={executeQuery}
-                    className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    <Zap size={14} className="mr-2" />
-                    Execute
-                  </button>
-                  <button
-                    className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    onClick={() => handleFormat()}
-                  >
-                    <RemoveFormatting size={14} className="mr-2" />
-                    Format
-                  </button>
-                </div>
-              </div>
-              <Editor
-                theme="vs-dark"
-                height="200px"
-                defaultLanguage="sql"
-                value={sqlQuery}
-                onChange={(value) => setSqlQuery(value ?? '')}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  wordWrap: 'on',
-                  lineNumbers: 'on',
-                  folding: true,
-                  formatOnPaste: true,
-                  formatOnType: true,
-                  suggestOnTriggerCharacters: true,
-                  tabSize: 2,
-                  scrollBeyondLastLine: false,
-                }}
-              />
-            </div>
-
-            {/* Data Preview Tabs */}
-            <Tabs defaultValue="table">
+            <Tabs defaultValue={activeDataView}>
               <TabsList>
+                <TabsTrigger value="query">
+                  <Table className="w-4 h-4 mr-2" />
+                  Query View
+                </TabsTrigger>
                 <TabsTrigger value="table">
                   <Table className="w-4 h-4 mr-2" />
                   Table View
@@ -259,9 +239,56 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="table" className='h-[300px]'>
-                <DataExplorer data={data ?? []}  />
+              <TabsContent value="query" className='min-h-[300px]'>
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium">SQL Query</label>
+                    <div className="flex justify-start items-center gap-x-2">
+                      <button 
+                        onClick={executeQuery}
+                        className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        <Zap size={14} className="mr-2" />
+                        Execute
+                      </button>
+                      <button
+                        className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        onClick={() => handleFormat()}
+                      >
+                        <RemoveFormatting size={14} className="mr-2" />
+                        Format
+                      </button>
+                    </div>
+                  </div>
+                  <Editor
+                    theme="vs-dark"
+                    height="200px"
+                    defaultLanguage="sql"
+                    value={form.query}
+                    onChange={(value) => updateForm({ query: value ?? '' })}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      wordWrap: 'on',
+                      lineNumbers: 'on',
+                      folding: true,
+                      formatOnPaste: true,
+                      formatOnType: true,
+                      suggestOnTriggerCharacters: true,
+                      tabSize: 2,
+                      scrollBeyondLastLine: false,
+                    }}
+                    loading={isExecuting}
+                  />
+                  {!executionStatus?.success && <Alert variant="destructive">
+                    <AlertDescription>{executionStatus.message}</AlertDescription>
+                  </Alert>}
+                </div>
               </TabsContent>
+
+            <TabsContent value="table" className='min-h-[300px]'>
+              <DataExplorer data={data ?? []}  />
+            </TabsContent>
 
               <ChartTabContent setActivePanel={setActivePanel} eChartOptions={getEChartOptions()} />
             </Tabs>
@@ -271,17 +298,17 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
         {/* Footer */}
         <div className="flex justify-end gap-2 mt-6">
           <button
-            onClick={onClose}
+            onClick={() => setIsOpen(false)}
             className="px-4 py-2 border rounded-lg hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
-            onClick={() => handleSaveWidget()}
+            onClick={() => handlers.handleSave(page.id)}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center"
           >
             <SaveAll size={20} className="mr-2" />
-            Save Widget
+            {isEditingWidget ? 'Update Widget' : 'Save Widget'}
           </button>
         </div>
       </div>
@@ -295,10 +322,11 @@ export default WidgetEditorModal;
 
 interface ChartTabContentProps {
   setActivePanel: (panel: 'connection' | 'chart') => void;
-  eChartOptions: any;
+  eChartOptions: EChartsOption;
 }
 const ChartTabContent: React.FC<ChartTabContentProps> = ({ setActivePanel, eChartOptions }) => {
   const [isReady, setIsReady] = useState(false);
+  const [options, setOptions] = useState<EChartsOption>({});
 
   useEffect(() => {
     // Wait for next tick to ensure DOM is ready
@@ -309,8 +337,13 @@ const ChartTabContent: React.FC<ChartTabContentProps> = ({ setActivePanel, eChar
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    setOptions(eChartOptions);
+    console.log('Chart Options:', eChartOptions);
+  }, [eChartOptions]);
+
   return (
-    <TabsContent value="chart" className="h-[300px]">
+    <TabsContent value="chart" className="min-h-[300px]">
       <div className="relative h-full w-full">
         <button
           onClick={() => setActivePanel('chart')}
@@ -321,10 +354,10 @@ const ChartTabContent: React.FC<ChartTabContentProps> = ({ setActivePanel, eChar
         </button>
         {isReady && (
           <ReactECharts
-            option={eChartOptions}
+            option={options}
             opts={{ renderer: 'svg' }}
             style={{
-              height: '300px',
+              minHeight: '300px',
               width: '70%'
             }}
             notMerge={true}

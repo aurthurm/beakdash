@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
-import { DataSource } from '@/app/types/datasource';
 import { CSVAdapter } from '@/app/lib/adapters/csv';
 import { SQLAdapter } from '@/app/lib/adapters/sql';
 import { RESTAdapter } from '@/app/lib/adapters/rest';
 import { WebSocketAdapter } from '@/app/lib/adapters/websocket';
+import { IConnection, IDataset, IWidget } from '../drizzle/schemas';
+import { useConnectionStore } from '@/app/store/connections';
+import { useDatasetStore } from '@/app/store/datasets';
+import { SQLConnectionConfig } from '@/app/types/datasource';
 
-export function useDataSource(dataSource: DataSource) {
+export function useDataSet(widget: IWidget) {
+  const { datasets } = useDatasetStore();
+  const { connections } = useConnectionStore();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -14,10 +19,22 @@ export function useDataSource(dataSource: DataSource) {
     let adapter: any;
     let interval: NodeJS.Timeout | null = null;
 
+    const dataset = datasets.find((d: IDataset) => d.id === widget.datasetId);
+    const connection = connections.find((c: IConnection) => c.id === dataset?.connectionId);
+    const query = widget.query;
+
     const fetchData = async () => {
       try {
-        const result = await adapter.fetchData();
-        setData(result);
+        let result;
+        switch (connection?.type) {
+          case 'sql':
+            result = await adapter.fetchData(query?.toString());
+            setData(result);
+            break;
+          default:
+            result = await adapter.fetchData();
+            setData(result);
+        }
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to fetch data'));
@@ -27,21 +44,21 @@ export function useDataSource(dataSource: DataSource) {
     };
 
     const initialize = async () => {
-      switch (dataSource?.type) {
+      switch (connection?.type) {
         case 'csv':
-          adapter = new CSVAdapter(dataSource);
+          adapter = new CSVAdapter(dataset);
           break;
         case 'sql':
-          adapter = new SQLAdapter(dataSource);
+          adapter = new SQLAdapter(connection?.config as SQLConnectionConfig);
           break;
         case 'rest':
-          adapter = new RESTAdapter(dataSource);
+          adapter = new RESTAdapter(dataset);
           break;
         case 'websocket':
-          adapter = new WebSocketAdapter(dataSource);
+          adapter = new WebSocketAdapter(dataset);
           break;
         case 'static':
-          setData(dataSource.data);
+          // setData(dataset.data);
           setLoading(false);
           return;
       }
@@ -54,8 +71,8 @@ export function useDataSource(dataSource: DataSource) {
         } else {
           await fetchData();
 
-          if (dataSource.refreshInterval) {
-            interval = setInterval(fetchData, dataSource.refreshInterval);
+          if (dataset?.refreshInterval) {
+            interval = setInterval(fetchData, dataset?.refreshInterval);
           }
         }
       } catch (err) {
@@ -75,7 +92,7 @@ export function useDataSource(dataSource: DataSource) {
         adapter.cleanup();
       }
     };
-  }, [dataSource]);
+  }, [widget.datasetId]);
 
   return { data, loading, error };
 }
