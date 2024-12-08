@@ -28,12 +28,12 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdat
   const getEChartOption = useCallback(() => {
     const chartOpts = getChartOptions(widget, data);
     setEchartOption(chartOpts);
-  },[widget.transformConfig])
+  },[data, widget])
 
   
   useEffect(() => {
     getEChartOption();
-  }, [widget.transformConfig]);
+  }, [getEChartOption, widget.transformConfig]);
 
   const onToggleChartType = (type: IWidget['type']) => {    
     // Preserve existing configuration while changing type

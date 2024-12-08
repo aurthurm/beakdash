@@ -5,16 +5,16 @@ import { useSession } from 'next-auth/react';
 import { usePageStore } from '@/app/store/pageStore'
 import { useEffect, useState } from 'react';
 import { IPage } from '../lib/drizzle/schemas';
-// import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
 
 export default function Dashboard() {
   const { data: session } = useSession()
   const { pages } = usePageStore()
   const [activePage, setActivePage] = useState({} as IPage);
 
-  // if (!session) {
-  //   redirect("/login");
-  // }
+  if (!session) {
+    redirect("/login");
+  }
 
   useEffect(() => {
     pages.forEach(item => {

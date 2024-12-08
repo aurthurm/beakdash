@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
 
    return Response.json(webhook, { status: 201 });
  } catch (error) {
+    console.log(error);
    return Response.json(
      { error: 'Failed to create webhook' },
      { status: 500 }
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
    
    return Response.json(webhooks);
  } catch (error) {
+    console.log(error);
    return Response.json(
      { error: 'Failed to fetch webhooks' },
      { status: 500 }

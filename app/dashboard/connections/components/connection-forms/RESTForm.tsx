@@ -47,7 +47,7 @@ export function RESTForm({ form, setForm }: { form: any; setForm: (form: any) =>
                     const headers = JSON.parse(e.target.value);
                     setForm({...form, headers});
                 } catch (error) {
-                    // Handle invalid JSON
+                    console.log(error);
                 }
                 }}
                 placeholder={'{\n  "Authorization": "Bearer token",\n  "Content-Type": "application/json"\n}'}
@@ -66,7 +66,7 @@ export function RESTForm({ form, setForm }: { form: any; setForm: (form: any) =>
                     const body = JSON.parse(e.target.value);
                     setForm({...form, body});
                 } catch (error) {
-                    // Handle invalid JSON
+                    console.log(error);
                 }
                 }}
                 placeholder={'{\n  "key": "value"\n}'}

@@ -129,15 +129,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [
-    session?.user?.id,
-    form.datasetId,
-    dataset?.connectionId,
-    isEditingWidget,
-    setDataset,
-    setConnection,
-    executeQuery
-  ]);
+  }, [session.user.id, form.datasetId, dataset.connectionId, isEditingWidget, setDataset, setConnection, executeQuery, fetchDatasets, fetchConnections, connection]);
 
   const onUpdateDataset = (datasetId: string) => {
     setForm({ ...form, datasetId });

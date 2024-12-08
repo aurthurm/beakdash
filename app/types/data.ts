@@ -1,5 +1,5 @@
 export interface DataPoint {
-    [key: string]: any;
+    [key: string]: string | number;
 }
 
 export interface SeriesConfig {
@@ -37,7 +37,7 @@ export type FiltersOps = 'equals' | 'contains' | 'gt' | 'lt' | 'between';
 export interface Filters {
   column: string;
   operator: FiltersOps;
-  value: any;
+  value: number;
 }
   
 export interface TransformConfig {

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription  } 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
 import { Button } from '@/app/ui/components/button';
 import { Alert, AlertDescription } from '@/app/ui/components/alert';
-import { CSVForm, SQLForm, RESTForm } from './connection-forms';
+import { SQLForm } from './connection-forms';
 import { Database, TestTube, Save } from 'lucide-react';
 import { useState } from 'react';
 import { ConnectionType } from '@/app/types/datasource';

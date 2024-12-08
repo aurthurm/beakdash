@@ -92,7 +92,7 @@ export function useDataSet(widget: IWidget) {
         adapter.cleanup();
       }
     };
-  }, [widget.datasetId]);
+  }, [connections, datasets, widget.datasetId, widget.query]);
 
   return { data, loading, error };
 }

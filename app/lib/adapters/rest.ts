@@ -35,18 +35,18 @@ export class RESTAdapter implements DataAdapter {
 }
 
 
-// REST API Widget
-const apiWidget = {
-  id: '2',
-  title: 'User Activity',
-  chartType: 'bar',
-  dataSource: {
-    type: 'rest',
-    endpoint: 'https://api.example.com/stats',
-    method: 'GET',
-    headers: {
-      'Authorization': 'Bearer ${token}'
-    },
-    dataPath: 'data.statistics'
-  }
-};
+// // REST API Widget
+// const apiWidget = {
+//   id: '2',
+//   title: 'User Activity',
+//   chartType: 'bar',
+//   dataSource: {
+//     type: 'rest',
+//     endpoint: 'https://api.example.com/stats',
+//     method: 'GET',
+//     headers: {
+//       'Authorization': 'Bearer ${token}'
+//     },
+//     dataPath: 'data.statistics'
+//   }
+// };

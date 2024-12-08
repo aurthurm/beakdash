@@ -72,7 +72,7 @@ export class ChartDataTransformer {
         case 'scatter':
           return this.transformToScatterChart(data, config);
         case 'radar':
-          return this.transformToRadarChart(data, config);
+          return this.transformToRadarChart(data);
         case 'heatmap':
           return this.transformToHeatmap(data, config);
         case 'tree':
@@ -198,7 +198,7 @@ export class ChartDataTransformer {
     /**
      * Transforms data for radar charts
      */
-    private static transformToRadarChart(data: DataPoint[], config: TransformConf) {
+    private static transformToRadarChart(data: DataPoint[]) {
       const indicators = Object.keys(data[0])
         .filter(key => typeof data[0][key] === 'number')
         .map(key => ({ name: key, max: Math.max(...data.map(item => Number(item[key]))) }));
