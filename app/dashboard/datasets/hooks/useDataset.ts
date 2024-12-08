@@ -16,11 +16,7 @@ export function useDatasets() {
         alert('You must be logged in to save a dataset');
         return;
       };
-      console.log('Save dataset', {
-        ...datasetForm,
-        userId: session?.user?.id
-      });
-
+      
       if (editingDataset) {
         await updateDataset(editingDataset.id!, {
           ...datasetForm, 

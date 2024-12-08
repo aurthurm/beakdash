@@ -10,8 +10,8 @@ interface DatasetState {
   loading: Record<string, boolean>;
   error: Record<string, string | null>;
   lastFetch: number;
-  fetchDatasets: (connectionId: string) => Promise<void>;
-  fetchDataset: (id: string) => Promise<void>;
+  fetchDatasets: (connectionId: string) => Promise<IDataset[]>;
+  fetchDataset: (id: string) => Promise<IDataset>;
   fetchDatasetData: (id: string) => Promise<void>;
   addDataset: (dataset: Omit<IDataset, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateDataset: (id: string, dataset: Partial<IDataset>) => Promise<void>;
@@ -38,7 +38,7 @@ export const useDatasetStore = create<DatasetState>()(
             store.datasets.length > 0 && 
             now - store.lastFetch < CACHE_TIME
           ) {
-            return;
+            return store.datasets;
           } 
           set({ lastFetch: now });
 
@@ -56,6 +56,7 @@ export const useDatasetStore = create<DatasetState>()(
               datasets: [...data],
               loading: { ...state.loading, [connectionId]: false }
             }));
+            return data;
           } catch (error) {
             set(state => ({
               loading: { ...state.loading, [connectionId]: false },
@@ -68,6 +69,11 @@ export const useDatasetStore = create<DatasetState>()(
         },
 
         fetchDataset: async (id) => {
+          // check if dataset is already in store
+          const store = get();
+          const dataset = store.datasets.find(ds => ds.id === id);
+          if (dataset) return dataset;
+
           set(state => ({
             loading: { ...state.loading, [id]: true },
             error: { ...state.error, [id]: null }
@@ -85,6 +91,7 @@ export const useDatasetStore = create<DatasetState>()(
               ],
               loading: { ...state.loading, [id]: false }
             }));
+            return data;
           } catch (error) {
             set(state => ({
               loading: { ...state.loading, [id]: false },

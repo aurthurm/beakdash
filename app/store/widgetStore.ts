@@ -14,7 +14,7 @@ interface WidgetState {
   fetchWidget: (id: string) => Promise<IWidget>;
   addWidget: (widget: Omit<IWidget, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateWidget: (id: string, updates: Partial<IWidget>) => Promise<void>;
-  removeWidget: (id: string) => Promise<void>;
+  deleteWidget: (id: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -127,7 +127,7 @@ export const useWidgetStore = create<WidgetState>()(
           }
         },
 
-        removeWidget: async (id: string) => {
+        deleteWidget: async (id: string) => {
           set({ loading: true, error: null });
           try {
             const response = await fetch(`/api/widgets/${id}`, {

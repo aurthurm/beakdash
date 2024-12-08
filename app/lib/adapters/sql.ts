@@ -9,8 +9,6 @@ export class SQLAdapter implements DataAdapter {
   }
 
   async fetchData(query: string): Promise<any[]> {
-    console.log("SQLAdapter config", this.config);
-    console.log("SQLAdapter query", query);
     const response = await fetch('/api/data-sources', {
       method: 'POST',
       headers: {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactECharts, { EChartsOption } from 'echarts-for-react';
 import {
@@ -63,14 +63,81 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
   const [executionStatus, setExecutionStatus] = useState<{ success: boolean, message: string }>({ success: true, message: '' });
   const [isExecuting, setIsExecuting] = useState(false);
 
+  const executeQuery = useCallback(async () => {
+    setIsExecuting(true);
+    try {
+      const adapter = new SQLAdapter(connection?.config as SQLConnectionConfig);
+      const fetchedData = await adapter.fetchData(form.query!);
+      setData(fetchedData);
+      setExecutionStatus({ success: true, message: '' });
+      setActiveDataView('table');
+    } catch (error) {
+      setExecutionStatus({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'An unexpected error occurred' 
+      });
+    }
+    setIsExecuting(false);
+  }, [connection?.config, form.query]);
+
+  
   useEffect(() => {
-    if(!session?.user?.id) {
+    // Early return if no user ID
+    if (!session?.user?.id) {
       console.log('You must be logged in to fetch datasets');
       return;
     }
-    fetchConnections(session.user?.id)
-    fetchDatasets(session.user?.id)
-  },[session?.user?.id]);
+
+    // Track mounted state
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        // Fetch datasets and connections in parallel
+        const [datasets, connections] = await Promise.all([
+          fetchDatasets(session.user.id),
+          fetchConnections(session.user.id)
+        ]);
+
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        // Find and set matching dataset
+        if (datasets.length > 0) {
+          const matchingDataset = datasets.find(d => d.id === form.datasetId);
+          if (matchingDataset) setDataset(matchingDataset);
+        }
+
+        // Find and set matching connection
+        if (connections.length > 0 && dataset?.connectionId) {
+          const matchingConnection = connections.find(c => c.id === dataset.connectionId);
+          if (matchingConnection) setConnection(matchingConnection);
+        }
+
+        // Execute query if editing widget
+        if (isEditingWidget && connection) {
+          await executeQuery();
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    session?.user?.id,
+    form.datasetId,
+    dataset?.connectionId,
+    isEditingWidget,
+    setDataset,
+    setConnection,
+    executeQuery
+  ]);
 
   const onUpdateDataset = (datasetId: string) => {
     setForm({ ...form, datasetId });
@@ -79,19 +146,6 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
     const connection = connections.find(c => c.id === dataset?.connectionId)
     setConnection(connection || null);
   };
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  useEffect(() => {
-    // if (mode === 'edit' && form) {
-    //   // if(form.data?.type === 'sql') {
-    //   //   setSqlQuery((form.dataSource as SQLDataSource).query ?? '');
-    //   // }
-    // }
-  }, [form]);
 
   useEffect(() => {
     setMounted(true);
@@ -139,23 +193,6 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
       console.error('SQL formatting error:', error);
     }
   };
-
-  const executeQuery = async () => {
-    setIsExecuting(true);
-    try {
-      const adapter = new SQLAdapter(connection?.config as SQLConnectionConfig);
-      const fetchedData = await adapter.fetchData(form.query!);
-      setData(fetchedData);
-      setExecutionStatus({ success: true, message: '' });
-      setActiveDataView('table');
-    } catch (error) {
-      setExecutionStatus({ 
-        success: false, 
-        message: error instanceof Error ? error.message : 'An unexpected error occurred' 
-      });
-    }
-    setIsExecuting(false);
-  }
 
   return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -339,7 +376,6 @@ const ChartTabContent: React.FC<ChartTabContentProps> = ({ setActivePanel, eChar
 
   useEffect(() => {
     setOptions(eChartOptions);
-    console.log('Chart Options:', eChartOptions);
   }, [eChartOptions]);
 
   return (

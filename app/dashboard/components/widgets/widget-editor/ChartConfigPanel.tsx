@@ -158,6 +158,7 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
               <SelectValue placeholder="Select chart type" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">None</SelectItem>
               <SelectItem value="bar">Bar Chart</SelectItem>
               <SelectItem value="line">Line Chart</SelectItem>
               <SelectItem value="pie">Pie Chart</SelectItem>
@@ -183,6 +184,7 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
               <SelectValue placeholder={`Select ${chartType === 'pie' ? 'Category' : 'X-Axis'}`} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">None</SelectItem>
               {columns?.all?.map(col => (
                 <SelectItem key={col} value={col}>{col}</SelectItem>
               ))}
@@ -206,6 +208,7 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
               <SelectValue placeholder="Select Value" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">None</SelectItem>
               {columns?.numeric?.map(col => (
                 <SelectItem key={col} value={col}>{col}</SelectItem>
               ))}

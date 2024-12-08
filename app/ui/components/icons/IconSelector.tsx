@@ -36,12 +36,9 @@ export const IconSelector: React.FC<IconSelectorProps> = ({ selectedIcon, onSele
   // Filter icons based on search
   const debouncedSearch = useDebounce(search, 300);
   const filteredIcons = useMemo(() => {
-    console.log('filteredIcons', debouncedSearch);
     const xx = iconList.filter(icon =>
       icon.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
-    console.log('iconList', iconList);
-    console.log('filterate', xx);
     return xx;
   }, [iconList, debouncedSearch]);
 

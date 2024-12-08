@@ -42,19 +42,21 @@ export function useWidget() {
         subtitle: '',
         datasetId: '',
       } as IWidget);
+      // close modal
       setIsOpen(false);
     };
 
     const handleEdit = (widget: IWidget) => { 
-      setIsEditingWidget(true);
       setForm(widget)
+      setIsEditingWidget(true);
+      setIsOpen(true);
     };
 
     const handleDelete = async (id: string) => { 
       await deleteWidget(id);
     };
 
-    const handleUpdate = async (id: string, data: Partial<IWidget>) => {
+    const handleUpdate = async (id: string, data: IWidget) => {
       await updateWidget(id, data);
     };
   

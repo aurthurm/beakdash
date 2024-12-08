@@ -10,7 +10,7 @@ interface ConnectionState {
   loading: boolean;
   error: string | null;
   lastFetch: number;
-  fetchConnections: (userId: string) => Promise<void>;
+  fetchConnections: (userId: string) => Promise<IConnection[]>;
   fetchConnection: (id: string) => Promise<IConnection>;
   addConnection: (connection: Omit<IConnection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateConnection: (id: string, connection: Partial<IConnection>) => Promise<void>;
@@ -37,7 +37,7 @@ export const useConnectionStore = create<ConnectionState>()(
             store.connections.length > 0 && 
             now - store.lastFetch < CACHE_TIME
           ) {
-            return;
+            return store.connections;
           } 
           set({ lastFetch: now });
 
@@ -47,6 +47,7 @@ export const useConnectionStore = create<ConnectionState>()(
             if (!response.ok) throw new Error('Failed to fetch connections');
             const data = await response.json();
             set({ connections: data, loading: false });
+            return data;
           } catch (error) {
             set({ 
               error: error instanceof Error ? error.message : 'Unknown error',

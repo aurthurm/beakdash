@@ -56,7 +56,6 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
   // form data if editing dataset
   useEffect(() => {
     if(form.connectionId){
-      console.log('form:', form);
       const conn = connections.find(c => c.id === form.connectionId);
       if (conn) {
         setConnection(conn);

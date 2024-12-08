@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import ReactECharts from 'echarts-for-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import ReactECharts, { EChartsOption } from 'echarts-for-react';
 import { Settings, Grip, Trash2 } from 'lucide-react';
 import ChartTypeToggle from '@/app/dashboard/components/widgets/ChartTypeToggle';
 import { useDataSet } from '@/app/lib/hooks/useDataSet';
@@ -10,6 +10,7 @@ import { WidgetError } from '@/app/dashboard/components/widgets/states/WidgetErr
 import { WidgetSkeleton } from '@/app/dashboard/components/widgets/states/WidgetSkeleton';
 import { getChartOptions } from '@/app/lib/charts/chart-options';
 import { IWidget } from '@/app/lib/drizzle/schemas';
+import { AggregationMethod } from '@/app/types/data';
 
 interface WidgetProps {
   widget: IWidget;
@@ -20,32 +21,69 @@ interface WidgetProps {
 
 const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdate }) => {
   const { data, loading, error } = useDataSet(widget); 
+  const [echartOption, setEchartOption] = useState<EChartsOption>(null);
 
   const isChart = widget.type !== 'count';
+
+  const getEChartOption = useCallback(() => {
+    const chartOpts = getChartOptions(widget, data);
+    setEchartOption(chartOpts);
+  },[widget.transformConfig])
+
+  
+  useEffect(() => {
+    getEChartOption();
+  }, [widget.transformConfig]);
+
+  const onToggleChartType = (type: IWidget['type']) => {    
+    // Preserve existing configuration while changing type
+    const newConfig = { ...widget.transformConfig };
+    if (!newConfig.series) newConfig.series = [{}];
+
+    // Preserve x-axis/category and y-axis/value when switching between chart types
+    if (type === 'pie') {
+      // When switching to pie chart
+      newConfig.series[0] = {
+        ...newConfig.series[0],
+        nameKey: newConfig.series[0].categoryKey || newConfig.series[0].nameKey,
+        valueKey: newConfig.series[0].valueKey
+      };
+      delete newConfig.series[0].categoryKey;
+    } else {
+      // When switching to bar/line chart
+      newConfig.series[0] = {
+        ...newConfig.series[0],
+        categoryKey: newConfig.series[0].nameKey || newConfig.series[0].categoryKey,
+        valueKey: newConfig.series[0].valueKey
+      };
+      delete newConfig.series[0].nameKey;
+    }
+
+    // Keep other configurations
+    newConfig.rotateLabels = widget.transformConfig?.rotateLabels ?? 0;
+    newConfig.aggregation = widget.transformConfig?.aggregation || {
+      enabled: false,
+      method: 'none' as AggregationMethod,
+      groupBy: []
+    };
+
+    // update widget with new type and configuration
+    onUpdate(widget.id!, { ...widget, type, transformConfig: newConfig });
+  };
 
   if (loading) {
     return <WidgetSkeleton type={widget.type} />;
   }
-
-  const handleEdit = () => {
-    onEdit(widget)
-  };
   
   if (error) {
     return (<>
       <WidgetError
         message={error.message}
         onRetry={() => window.location.reload()}
-        onEdit={() => handleEdit()}
+        onEdit={() => onEdit(widget)}
       />
     </>);
   }
-
-  const getEChartOptions = () => getChartOptions(widget, data)
-
-  const handleUpdate = (type: IWidget['type']) => {
-    onUpdate(widget.id!, { type });
-  };
 
   return (
     <div id={widget.id} className="h-full">
@@ -60,16 +98,16 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdat
           <AICopilotButton 
             variant='icon' 
             widgetId={widget.id}
-            context={`Widget ID: ${widget.id}\nTitle: ${widget.title}\nType: ${widget.type}\nQuery: ${widget.sql}`}
+            context={`Widget ID: ${widget.id}\nTitle: ${widget.title}\nType: ${widget.type}\nQuery: ${widget.query}`}
           />
           {isChart && (
             <ChartTypeToggle
               currentChart={widget.type!}
-              onChange={handleUpdate}
+              onChange={onToggleChartType}
             />
           )}
           <button
-            onClick={() => handleEdit()}
+            onClick={() => onEdit(widget)}
             className="p-2 hover:bg-gray-100 rounded-lg"
           >
             <Settings size={20} />
@@ -91,9 +129,9 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdat
       </div>
       <hr />
       <div className='p-4 h-full'>
-        {isChart ? (
+        {isChart && echartOption ? (
           <ReactECharts
-            option={getEChartOptions()}
+            option={echartOption}
             style={{ height: 'calc(100% - 4rem)' }}
           />
         ) : (
