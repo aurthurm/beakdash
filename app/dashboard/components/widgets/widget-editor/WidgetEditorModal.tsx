@@ -20,7 +20,7 @@ import { SQLAdapter } from '@/app/lib/adapters/sql';
 import { IConnection, IDataset, IPage, IWidget } from '@/app/lib/drizzle/schemas';
 import { Alert, AlertDescription } from '@/app/ui/components/alert';
 import { useDatasetStore } from '@/app/store/datasets';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@clerk/nextjs'
 import { useConnectionStore } from '@/app/store/connections';
 import { SQLConnectionConfig } from '@/app/types/datasource';
 
@@ -51,7 +51,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
   setForm,
   handlers
 }) => {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<DataPoint[]>([]);
   const [activePanel, setActivePanel] = useState<'connection' | 'chart'>('connection');
@@ -83,12 +83,10 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
   
   useEffect(() => {
     // Early return if no user ID
-    if (!session?.user?.id) {
+    if (!userId) {
       console.log('You must be logged in to fetch datasets');
       return;
     }
-    const userId = session.user.id;
-
     // Track mounted state
     let isMounted = true;
 
@@ -130,7 +128,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [session?.user?.id, form.datasetId, dataset?.connectionId, isEditingWidget, setDataset, setConnection, executeQuery, fetchDatasets, fetchConnections, connection]);
+  }, [userId, form.datasetId, dataset?.connectionId, isEditingWidget, setDataset, setConnection, executeQuery, fetchDatasets, fetchConnections, connection]);
 
   const onUpdateDataset = (datasetId: string) => {
     setForm({ ...form, datasetId });

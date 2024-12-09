@@ -5,11 +5,11 @@ import { Badge } from "@/app/ui/components/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/ui/components/select";
 import { SchemaInfo } from "@/app/types/datasource";
 import { useConnectionStore } from "@/app/store/connections";
-import { useSession } from "next-auth/react";
 import { Button } from "@/app/ui/components/button";
 import { Alert, AlertDescription } from "@/app/ui/components/alert";
 import { Loader } from "lucide-react";
 import { IConnection, IDataset } from "@/app/lib/drizzle/schemas";
+import { useAuth } from "@clerk/nextjs";
 
 interface DatasetFormProps {
   form: IDataset;
@@ -17,7 +17,7 @@ interface DatasetFormProps {
 }
 
 export function DatasetForm({ form, setForm }: DatasetFormProps) {
-  const { data: session } = useSession();
+  const { userId } = useAuth();
   const { connections, fetchConnections } = useConnectionStore();
   const [connection, setConnection] = useState<IConnection | null>(null);
   const [fetchingSchemas, setFetchingSchemas] = useState(false);
@@ -48,10 +48,10 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
 
   // get user connections
   useEffect(() => {
-    if (connections.length === 0 && session?.user?.id) {
-      fetchConnections(session.user.id);
+    if (connections.length === 0 && userId) {
+      fetchConnections(userId);
     }
-  }, [session, connections, fetchConnections]);
+  }, [userId, connections, fetchConnections]);
 
   // form data if editing dataset
   useEffect(() => {

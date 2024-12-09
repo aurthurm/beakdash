@@ -4,10 +4,10 @@ import { DatasetDialog } from './components/DatasetDialog';
 import { useEffect } from 'react';
 import { useDatasetStore } from '@/app/store/datasets';
 import { DatasetManager } from './components/DatasetManager';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@clerk/nextjs'
 
 export default function DatasetsPage() {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const { datasets, fetchDatasets } = useDatasetStore();
   const {
     isDialogOpen,
@@ -19,12 +19,12 @@ export default function DatasetsPage() {
   } = useDatasets();
 
   useEffect(() => {
-    if(!session?.user?.id){
+    if(!userId){
       console.log('No user id found, cant fetch datasets');
       return;
     }
-    fetchDatasets(session.user.id);
-  }, [fetchDatasets, session?.user?.id]);
+    fetchDatasets(userId);
+  }, [fetchDatasets, userId]);
 
   return (
     <div className="p-6 space-y-6">

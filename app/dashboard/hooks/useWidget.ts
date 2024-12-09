@@ -1,11 +1,11 @@
 import { IWidget } from '@/app/lib/drizzle/schemas';
 import { useWidgetStore } from '@/app/store/widgetStore';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@clerk/nextjs'
 import { useState } from 'react';
 
 export function useWidget() {
     const [isOpen, setIsOpen] = useState(false);
-    const { data: session } = useSession()
+    const { userId } = useAuth()
     const { addWidget, updateWidget, deleteWidget } = useWidgetStore();
     const [isEditingWidget, setIsEditingWidget] = useState(false);
   
@@ -16,7 +16,7 @@ export function useWidget() {
     } as IWidget);
   
     const handleSave = async (pageId: string) => {
-      if(!session?.user?.id) {
+      if(!userId) {
         console.error('User not authenticated - cannot save widget');
         return;
       }
@@ -26,7 +26,7 @@ export function useWidget() {
       }
       const payload = { 
         ...form, 
-        userId: session.user.id,
+        userId,
         pageId
       } as IWidget;
 

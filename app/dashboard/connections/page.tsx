@@ -4,10 +4,10 @@ import { ConnectionDialog } from './components/ConnectionDialog';
 import { useEffect } from 'react';
 import { useConnectionStore } from '@/app/store/connections';
 import { ConnectionManager } from './components/ConnectionManager';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@clerk/nextjs'
 
 export default function ConnectionsPage() {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const { connections, fetchConnections } = useConnectionStore();
   const {
     isDialogOpen,
@@ -22,12 +22,12 @@ export default function ConnectionsPage() {
   } = useConnections();
 
   useEffect(() => {
-    if(!session?.user?.id){
+    if(!userId){
       console.log('No user id found, cant fetch connections');
       return;
     }
-    fetchConnections(session?.user?.id);
-  }, [fetchConnections, session?.user?.id]);
+    fetchConnections(userId);
+  }, [fetchConnections, userId]);
 
   return (
     <div className="p-6 space-y-6">

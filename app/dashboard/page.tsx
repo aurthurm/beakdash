@@ -1,19 +1,19 @@
 'use client';
 
 import WidgetGrid from '@/app/dashboard/components/widgets/WidgetGrid';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@clerk/nextjs'
 import { usePageStore } from '@/app/store/pageStore'
 import { useEffect, useState } from 'react';
 import { IPage } from '../lib/drizzle/schemas';
 import { redirect } from 'next/navigation';
 
 export default function Dashboard() {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const { pages } = usePageStore()
   const [activePage, setActivePage] = useState({} as IPage);
 
-  if (!session) {
-    redirect("/login");
+  if (!userId) {
+    redirect("/sign-in");
   }
 
   useEffect(() => {

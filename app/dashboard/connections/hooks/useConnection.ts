@@ -1,11 +1,11 @@
 import { IConnection } from '@/app/lib/drizzle/schemas';
 import { useConnectionStore } from '@/app/store/connections';
 import { SQLConnection, ConnectionType } from '@/app/types/datasource';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@clerk/nextjs'
 import { useState } from 'react';
 
 export function useConnections() {
-    const { data: session } = useSession()
+    const { userId } = useAuth()
     const { loading, addConnection, updateConnection, deleteConnection } = useConnectionStore();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingConnection, setEditingConnection] = useState<IConnection>();
@@ -19,7 +19,7 @@ export function useConnections() {
   
     // All your handlers
     const handleSave = async (connectionType: ConnectionType) => {
-      if(!session?.user?.id) {
+      if(!userId) {
         alert('You must be logged in to save a connection');
         return;
       };
@@ -29,13 +29,13 @@ export function useConnections() {
             await updateConnection(editingConnection.id!, {
               ...sqlForm, 
               type: connectionType,
-              userId: session?.user?.id
+              userId: userId
             } as IConnection);
           } else {
             await addConnection({
               ...sqlForm, 
               type: connectionType,
-              userId: session?.user?.id,
+              userId: userId,
             });
           }
           break;

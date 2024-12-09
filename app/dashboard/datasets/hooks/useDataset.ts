@@ -1,10 +1,10 @@
 import { IDataset } from '@/app/lib/drizzle/schemas';
 import { useDatasetStore } from '@/app/store/datasets';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@clerk/nextjs'
 import { useState } from 'react';
 
 export function useDatasets() {
-    const { data: session } = useSession()
+    const { userId } = useAuth()
     const { loading, addDataset, updateDataset, deleteDataset } = useDatasetStore();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingDataset, setEditingDataset] = useState<IDataset | null>(null);
@@ -12,7 +12,7 @@ export function useDatasets() {
     const [datasetForm, setDatasetForm] = useState<IDataset>({} as IDataset);
   
     const handleSave = async () => {
-      if(!session?.user?.id) {
+      if(!userId) {
         alert('You must be logged in to save a dataset');
         return;
       };
@@ -20,12 +20,12 @@ export function useDatasets() {
       if (editingDataset) {
         await updateDataset(editingDataset.id!, {
           ...datasetForm, 
-          userId: session?.user?.id
+          userId: userId
         });
       } else {
         await addDataset({
           ...datasetForm, 
-          userId: session?.user?.id,
+          userId: userId,
         });
       }
       setIsDialogOpen(false);

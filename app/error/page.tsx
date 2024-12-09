@@ -1,12 +1,12 @@
 "use client"
- 
+
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
- 
+
 enum Error {
   Configuration = "Configuration",
 }
- 
+
 const errorMap = {
   [Error.Configuration]: (
     <p>
@@ -16,7 +16,7 @@ const errorMap = {
     </p>
   ),
 }
- 
+
 function ErrPage() {
   const search = useSearchParams()
   const error = search.get("error") as Error
@@ -37,7 +37,6 @@ function ErrPage() {
     </div>
   )
 }
-
 
 export default function ErrorPage() {
   return (

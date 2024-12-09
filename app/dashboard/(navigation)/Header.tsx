@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Moon, Bell, ShoppingBag, Menu, LogOut, User, Plus } from 'lucide-react';
 import AddPageModal from '@/app/dashboard/(navigation)/AddPageModal'
 import { usePageStore } from '@/app/store/pageStore'
-import Image from 'next/image';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -64,7 +63,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
             <Moon size={20} />
           </button>
           <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Image src="https://flagcdn.com/w20/gb.png" alt="English" className="w-5" />
+            {/* <Image src="https://flagcdn.com/w20/gb.png" alt="English" width={20} height={20} /> */}
           </button>
           <button className="p-2 hover:bg-gray-100 rounded-full relative">
             <ShoppingBag size={20} />
@@ -82,11 +81,13 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
               className="flex items-center gap-2 ml-2 p-2 hover:bg-gray-100 rounded-lg"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
-              <Image
+              {/* <Image
                 src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80"
                 alt="Profile"
                 className="w-8 h-8 rounded-full"
-              />
+                width={32}
+                height={32}
+              /> */}
               <div>
                 <div className="font-medium">Mike Nielsen</div>
                 <div className="text-sm text-gray-500">Admin</div>

@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import IconSelector from '@/app/ui/components/icons/IconSelector';
 import { ErrorBoundary } from '@/app/ui/components/ErrorBoundary';
 import { IPage } from '@/app/lib/drizzle/schemas';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@clerk/nextjs'
 
 interface AddPageModalProps {
   isOpen: boolean;
@@ -14,7 +14,7 @@ interface AddPageModalProps {
 }
 
 const AddPageModal: React.FC<AddPageModalProps> = ({ isOpen, onClose, onAdd }) => {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const [form, setForm] = useState<IPage>({
     icon: '', label: '', route: '', active: false, userId: ''
   } as IPage);
@@ -25,11 +25,11 @@ const AddPageModal: React.FC<AddPageModalProps> = ({ isOpen, onClose, onAdd }) =
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if(!session?.user?.id) {
+    if(!userId) {
       console.log('You must be logged in to add a Page');
       return;
     };
-    onAdd({...form, userId: session?.user?.id} as IPage);
+    onAdd({...form, userId: userId} as IPage);
     // Reset form
     setForm({icon: '', label: '', route: '', active: false, userId: ''});
   };

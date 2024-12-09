@@ -9,26 +9,24 @@ import {
 import { usePageStore } from '@/app/store/pageStore'
 import { IPage } from '@/app/lib/drizzle/schemas';
 import { renderIcon } from '@/app/ui/components/icons/Icon';
-import { useSession } from 'next-auth/react';
-import Image from 'next/image';
+import { useAuth } from '@clerk/nextjs'
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
 const Sidebar = ({ isOpen }: SidebarProps) => {  
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const router = useRouter();
   const pathname = usePathname();
   const { setActive, pages, bottomPages, fetchPages, seedDashboard } = usePageStore()
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   useEffect(() => {
-    if(!session?.user?.id) {
+    if(!userId) {
       console.log('You must be logged in to fetch pages');
       return;
     }
-    const userId = session.user?.id;
     fetchPages(userId).then( async (data) => {
       if(data.length == 0) {
         await seedDashboard(userId);
@@ -39,7 +37,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         }
       }
     });
-  }, [fetchPages, seedDashboard, session?.user?.id]);
+  }, [fetchPages, seedDashboard, userId]);
 
   const toggleSubmenu = (menu: IPage) => {
     if (menu.subpages) {
@@ -156,11 +154,13 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       </nav>
       <div className="border-t p-4">
         <div className={`flex items-center gap-3 ${!isOpen && 'justify-center'}`}>
-          <Image
+          {/* <Image
             src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80"
             alt="Profile"
             className="w-10 h-10 rounded-full flex-shrink-0"
-          />
+            width={40}
+            height={40}
+          /> */}
           {isOpen && (
             <div>
               <div className="font-medium">Mike Nielsen</div>
