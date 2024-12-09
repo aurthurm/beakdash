@@ -39,7 +39,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         }
       }
     });
-  }, [fetchPages, seedDashboard, session.user?.id]);
+  }, [fetchPages, seedDashboard, session?.user?.id]);
 
   const toggleSubmenu = (menu: IPage) => {
     if (menu.subpages) {

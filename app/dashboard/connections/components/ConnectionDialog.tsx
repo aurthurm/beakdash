@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/app/ui/components/alert';
 import { SQLForm } from './connection-forms';
 import { Database, TestTube, Save } from 'lucide-react';
 import { useState } from 'react';
-import { ConnectionType } from '@/app/types/datasource';
+import { ConnectionType, SQLConnection } from '@/app/types/datasource';
 import { IConnection } from '@/app/lib/drizzle/schemas';
 
 
@@ -17,13 +17,13 @@ interface ConnectionDialogProps {
     onSave: (type: ConnectionType) => void;
     onTest: (type: ConnectionType) => void;
     forms: {
-    //   csv: any;
-      sql: IConnection;
-    //   rest: any;
+      csv: any;
+      sql: SQLConnection;
+      rest: any;
     };
     setForms: {
       setCsvForm: (form: IConnection) => void;
-      setSqlForm: (form: IConnection) => void;
+      setSqlForm: (form: SQLConnection) => void;
       setRestForm: (form: IConnection) => void;
     };
     testStatus: { success: boolean; message: string };
@@ -43,7 +43,7 @@ interface ConnectionDialogProps {
     isTesting,
     loading
   }: ConnectionDialogProps) {
-    const [activeTab, setActiveTab] = useState<ConnectionType>(editingConnection?.type || 'sql');
+    const [activeTab, setActiveTab] = useState<IConnection['type']>(editingConnection?.type || 'sql');
     const isDisabled = isTesting || !testStatus.success || loading;
 
     return (

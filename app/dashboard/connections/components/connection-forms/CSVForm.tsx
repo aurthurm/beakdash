@@ -25,11 +25,11 @@ export function CSVForm({ form, setForm }: CSVFormProps) {
         </div>
         <div>
             <Label>Refresh Interval (ms)</Label>
-            <Input 
+            {/* <Input 
                 type="number"
                 value={form.refreshInterval}
                 onChange={(e) => setForm({...form, refreshInterval: parseInt(e.target.value)})}
-            />
+            /> */}
             </div>
         </div>
     </div>

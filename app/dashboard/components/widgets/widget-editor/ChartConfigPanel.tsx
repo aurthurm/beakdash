@@ -99,21 +99,21 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
 
   const onAggregationEnableChange = (enabled: boolean) => {
     const newConfig = { ...config };
-    if (!newConfig.aggregation) newConfig.aggregation = { enabled: false, method: 'none', groupBy: [] };
+    if (!newConfig.aggregation) newConfig.aggregation = { enabled: false, method: undefined, groupBy: [] };
     newConfig.aggregation.enabled = enabled;
     updateConfig(newConfig);
   };
 
   const onAggregationMethodChange = (method: AggregationMethod) => {
     const newConfig = { ...config };
-    if (!newConfig.aggregation) newConfig.aggregation = { enabled: true, method: 'none', groupBy: [] };
+    if (!newConfig.aggregation) newConfig.aggregation = { enabled: true, method: undefined, groupBy: [] };
     newConfig.aggregation.method = method;
     updateConfig(newConfig);
   };
 
   const onGroupByChange = (selectedGroups: string[]) => {
     const newConfig = { ...config };
-    if (!newConfig.aggregation) newConfig.aggregation = { enabled: true, method: 'none', groupBy: [] };
+    if (!newConfig.aggregation) newConfig.aggregation = { enabled: true, method: undefined, groupBy: [] };
     newConfig.aggregation.groupBy = selectedGroups;
     updateConfig(newConfig);
   };

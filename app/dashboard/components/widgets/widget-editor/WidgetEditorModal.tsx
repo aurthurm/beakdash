@@ -87,6 +87,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
       console.log('You must be logged in to fetch datasets');
       return;
     }
+    const userId = session.user.id;
 
     // Track mounted state
     let isMounted = true;
@@ -95,8 +96,8 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
       try {
         // Fetch datasets and connections in parallel
         const [datasets, connections] = await Promise.all([
-          fetchDatasets(session.user.id),
-          fetchConnections(session.user.id)
+          fetchDatasets(userId),
+          fetchConnections(userId)
         ]);
 
         // Only update state if component is still mounted
@@ -129,7 +130,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [session.user.id, form.datasetId, dataset.connectionId, isEditingWidget, setDataset, setConnection, executeQuery, fetchDatasets, fetchConnections, connection]);
+  }, [session?.user?.id, form.datasetId, dataset?.connectionId, isEditingWidget, setDataset, setConnection, executeQuery, fetchDatasets, fetchConnections, connection]);
 
   const onUpdateDataset = (datasetId: string) => {
     setForm({ ...form, datasetId });
@@ -157,8 +158,10 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
       // Get first non-null value
       const sampleValue = (data ?? []).find(row => row[col] != null)?.[col];
       // Check if it's a number or can be converted to a number
+      if(sampleValue === null) return false;
+      if(typeof sampleValue === 'number') return true;
       return typeof sampleValue === 'number' || 
-             (!isNaN(sampleValue) && !isNaN(parseFloat(sampleValue)));
+             (!isNaN(sampleValue as any) && !isNaN(parseFloat(sampleValue as any)));
     });
     
     const nonNumericCols = allColumns.filter(col => {
@@ -166,7 +169,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
       const sampleValue = (data ?? []).find(row => row[col] != null)?.[col];
       // Check if it's NOT a number and can't be converted to a number
       return typeof sampleValue !== 'number' && 
-             (isNaN(sampleValue) || isNaN(parseFloat(sampleValue)));
+             (isNaN(sampleValue as any) || isNaN(parseFloat(sampleValue as any)));
     });
   
     return {

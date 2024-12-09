@@ -32,8 +32,8 @@ export class ChartDataTransformer {
       if (config.aggregation?.enabled) {
         processedData = this.aggregate(
           processedData,
-          config.aggregation.method,
-          config.aggregation.groupBy
+          config.aggregation?.method,
+          config.aggregation?.groupBy
         );
       }
   
@@ -99,7 +99,7 @@ export class ChartDataTransformer {
         
         if (!acc[categoryName]) {
           acc[categoryName] = {
-            name: categoryName,
+            name: categoryName?.toString(),
             value: 0,
             ...this.extractExtraData(item, seriesConfig.extraKeys)
           };
@@ -273,14 +273,15 @@ export class ChartDataTransformer {
      */
     private static aggregate(
       data: DataPoint[],
-      method: 'sum' | 'avg' | 'max' | 'min' | 'count',
-      groupBy: string[]
+      method?: 'sum' | 'avg' | 'max' | 'min' | 'count',
+      groupBy?: string[]
     ): DataPoint[] {
       const groups = new Map<string, DataPoint[]>();
   
       // Group data
       data.forEach(item => {
         const key = groupBy?.map(col => item[col]).join('|');
+        if(!key) return;
         if (!groups.has(key)) {
           groups.set(key, []);
         }
@@ -372,34 +373,36 @@ export class ChartDataTransformer {
      * Applies formatting to values
      */
     private static applyFormatting(data: any, formatting: TransformConf['formatting']) {
-      const formatValue = (value: any) => {
-        if (formatting?.customFormatter) {
-          return formatting.customFormatter(value);
-        }
-        if (formatting?.numberFormat && typeof value === 'number') {
-          return new Intl.NumberFormat(undefined, formatting.numberFormat).format(value);
-        }
-        if (formatting?.dateFormat && value instanceof Date) {
-          return new Intl.DateTimeFormat(undefined, formatting.dateFormat).format(value);
-        }
-        return value;
-      };
+      console.log('Applying formatting:', formatting);
+      console.log('Data:', data);
+      // const formatValue = (value: any) => {
+      //   if (formatting?.customFormatter) {
+      //     return formatting.customFormatter(value);
+      //   }
+      //   if (formatting?.numberFormat && typeof value === 'number') {
+      //     return new Intl.NumberFormat(undefined, formatting.numberFormat).format(value);
+      //   }
+      //   if (formatting?.dateFormat && value instanceof Date) {
+      //     return new Intl.DateTimeFormat(undefined, formatting.dateFormat).format(value);
+      //   }
+      //   return value;
+      // };
   
-      const formatObject = (obj: any) => {
-        if (Array.isArray(obj)) {
-          return obj.map(item => formatObject(item));
-        }
-        if (obj && typeof obj === 'object') {
-          const formatted: any = {};
-          for (const key in obj) {
-            formatted[key] = formatObject(obj[key]);
-          }
-          return formatted;
-        }
-        return formatValue(obj);
-      };
+      // const formatObject = (obj: any) => {
+      //   if (Array.isArray(obj)) {
+      //     return obj.map(item => formatObject(item));
+      //   }
+      //   if (obj && typeof obj === 'object') {
+      //     const formatted: any = {};
+      //     for (const key in obj) {
+      //       formatted[key] = formatObject(obj[key]);
+      //     }
+      //     return formatted;
+      //   }
+      //   return formatValue(obj);
+      // };
   
-      return formatObject(data);
+      // return formatObject(data);
     }
   
     /**

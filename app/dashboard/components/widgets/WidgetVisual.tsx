@@ -16,7 +16,7 @@ interface WidgetProps {
   widget: IWidget;
   onEdit: (widget: IWidget) => void;
   onDelete: (id: string) => void;
-  onUpdate: (id: string, data: Partial<IWidget>) => void;
+  onUpdate: (id: string, data: IWidget) => void;
 }
 
 const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdate }) => {

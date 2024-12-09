@@ -65,7 +65,7 @@ export interface WidgetConfig {
   
         config.onLoad?.();
       } catch (error) {
-        config.onError?.(error);
+        config.onError?.(error instanceof Error ? error : new Error(error?.toString()));
         throw error;
       }
     }
@@ -98,6 +98,7 @@ export interface WidgetConfig {
     }
   
     private createWidgetElement(widget: any): HTMLElement {
+      console.log('widget', widget);
       const element = document.createElement('div');
       element.className = 'dashboard-widget';
       // Add widget content based on type
@@ -106,6 +107,8 @@ export interface WidgetConfig {
     }
   
     private updateWidgetData(element: HTMLElement, data: any): void {
+      console.log('data', data);
+      console.log('element', element);
       // Update widget content with new data
     }
   

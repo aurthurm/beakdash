@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CSVAdapter } from '@/app/lib/adapters/csv';
+// import { CSVAdapter } from '@/app/lib/adapters/csv';
 import { SQLAdapter } from '@/app/lib/adapters/sql';
-import { RESTAdapter } from '@/app/lib/adapters/rest';
-import { WebSocketAdapter } from '@/app/lib/adapters/websocket';
+// import { RESTAdapter } from '@/app/lib/adapters/rest';
+// import { WebSocketAdapter } from '@/app/lib/adapters/websocket';
 import { IConnection, IDataset, IWidget } from '../drizzle/schemas';
 import { useConnectionStore } from '@/app/store/connections';
 import { useDatasetStore } from '@/app/store/datasets';
@@ -45,19 +45,19 @@ export function useDataSet(widget: IWidget) {
 
     const initialize = async () => {
       switch (connection?.type) {
-        case 'csv':
-          adapter = new CSVAdapter(dataset);
-          break;
+        // case 'csv':
+        //   adapter = new CSVAdapter(dataset);
+        //   break;
         case 'sql':
           adapter = new SQLAdapter(connection?.config as SQLConnectionConfig);
           break;
-        case 'rest':
-          adapter = new RESTAdapter(dataset);
-          break;
-        case 'websocket':
-          adapter = new WebSocketAdapter(dataset);
-          break;
-        case 'static':
+        // case 'rest':
+        //   adapter = new RESTAdapter(dataset);
+        //   break;
+        // case 'websocket':
+        //   adapter = new WebSocketAdapter(dataset);
+        //   break;
+        default:
           // setData(dataset.data);
           setLoading(false);
           return;

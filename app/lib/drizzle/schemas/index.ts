@@ -1,7 +1,8 @@
 import { 
   pgTable, integer, varchar, 
   jsonb, timestamp,   boolean,
-  text,primaryKey
+  text,primaryKey,
+  foreignKey
 } from "drizzle-orm/pg-core";
 import { z } from 'zod';
 import type { AdapterAccountType } from "next-auth/adapters"
@@ -69,10 +70,11 @@ export const authenticatorsTable = pgTable("authenticator", {
   })
 )
 
+export const conntypes = ['csv', 'sql', 'nosql', 'rest'] as const;
 export const connectionSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1),
-  type: z.string().min(1),
+  type: z.enum(conntypes),
   config: z.record(z.any()).optional(),
   userId: z.string().min(1),
   createdAt: z.string().datetime().transform((str) => new Date(str)).optional(),
@@ -134,7 +136,7 @@ interface PageSchemaType {
   label: string;
   route?: string;
   icon: string;
-  active: boolean;
+  active?: boolean;
   parentId?: string;
   subpages?: PageSchemaType[];
   userId: string;
@@ -157,16 +159,26 @@ export const pageSchema: z.ZodType<PageSchemaType> = z.lazy(() => z.object({
 export type IPage = z.infer<typeof pageSchema>;
 
 export const pagesTable = pgTable("pages", {
-  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  label: varchar("label", { length: 255 }).notNull(),
-  route: varchar("route", { length: 255 }),
-  icon: varchar("icon", { length: 100 }),
-  active: boolean("active").default(true),
-  parentId: varchar("parent_id").references(() => pagesTable.id),
-  userId: varchar("user_id").references(() => usersTable.id).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+    id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    label: varchar("label", { length: 255 }).notNull(),
+    route: varchar("route", { length: 255 }),
+    icon: varchar("icon", { length: 100 }),
+    active: boolean("active").default(true),
+    parentId: varchar("parent_id"),
+    userId: varchar("user_id").references(() => usersTable.id).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      parentReference: foreignKey({
+        columns: [table.parentId],
+        foreignColumns: [table.id],
+        name: "subpage_parent_id_fkey",
+      }),
+    };
+  }
+);
 
 export type SelectPage = typeof pagesTable.$inferSelect;
 export type InsertPage = typeof pagesTable.$inferInsert;

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/app/lib/drizzle';
 import { eq } from 'drizzle-orm';
 import { pagesTable, pageSchema } from '@/app/lib/drizzle/schemas';
+import { z } from 'zod';
 
 export async function GET(request: Request) {
     try {

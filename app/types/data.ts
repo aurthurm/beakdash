@@ -16,8 +16,8 @@ export type SortingOrder = 'asc' | 'desc';
 
 export interface Aggregation {
   enabled: boolean;
-  method: AggregationMethod;
-  groupBy: string[];
+  method?: AggregationMethod;
+  groupBy?: string[];
 }
 
 export interface Sorting {

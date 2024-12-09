@@ -16,7 +16,7 @@ const ChartTypeToggle: React.FC<ChartTypeToggleProps> = ({ currentChart, onChang
     pie: PieChart,
   };
 
-  if (!charts.includes(currentChart)) return null;
+  if (currentChart == 'count') return null;
 
   return (
     <div className="flex gap-1">

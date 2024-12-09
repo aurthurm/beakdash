@@ -1,6 +1,6 @@
 import { IConnection } from '@/app/lib/drizzle/schemas';
 import { useConnectionStore } from '@/app/store/connections';
-import { SQLConnection, ConnectionType, SQLConnectionConfig } from '@/app/types/datasource';
+import { SQLConnection, ConnectionType } from '@/app/types/datasource';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
@@ -8,12 +8,12 @@ export function useConnections() {
     const { data: session } = useSession()
     const { loading, addConnection, updateConnection, deleteConnection } = useConnectionStore();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingConnection, setEditingConnection] = useState<IConnection | null>(null);
+    const [editingConnection, setEditingConnection] = useState<IConnection>();
     const [isTesting, setIsTesting] = useState(false);
     const [testStatus, setTestStatus] = useState({ success: false, message: '' });
   
     // Form states
-    const [csvForm, setCsvForm] = useState<SQLConnectionConfig>({ driver: 'postgresql' });
+    const [csvForm, setCsvForm] = useState({});
     const [sqlForm, setSqlForm] = useState<SQLConnection>({config: {}} as SQLConnection);
     const [restForm, setRestForm] = useState({});
   

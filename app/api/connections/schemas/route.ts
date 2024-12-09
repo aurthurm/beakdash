@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const schemaInfo = await getSchemaInfo(config);
     return NextResponse.json(schemaInfo);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'An error occurred' }, { status: 500 });
   }
 }
 
@@ -91,15 +91,15 @@ async function getSqliteSchema(url: string): Promise<SchemaInfo> {
   const getAllTables = promisify(db.all.bind(db));
   
   try {
-    const tables = await getAllTables(`
+    const tables: any = await getAllTables(`
       SELECT name as table_name FROM sqlite_master 
       WHERE type='table' AND name NOT LIKE 'sqlite_%'
     `);
     
     let results: any[] = [];
     for (const table of tables) {
-      const tableInfo = await getAllTables(`PRAGMA table_info('${table.table_name}')`);
-      results = results.concat(tableInfo.map(info => ({
+      const tableInfo: any = await getAllTables(`PRAGMA table_info('${table.table_name}')`);
+      results = results.concat(tableInfo.map((info: any) => ({
         table_name: table.table_name,
         name: info.name,
         type: info.type,
