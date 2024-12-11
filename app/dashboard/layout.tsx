@@ -3,13 +3,11 @@
 import React, { useState } from 'react';
 import Sidebar from '@/app/dashboard/(navigation)/Sidebar';
 import Header from '@/app/dashboard/(navigation)/Header';
-import AuthProvider from '@/app/ui/providers/auth';
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <AuthProvider>
       <div className="flex h-screen bg-gray-100">
         <div className="p-4 h-full">
           <Sidebar isOpen={isSidebarOpen} />
@@ -21,7 +19,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           {children}
         </div>
       </div>
-    </AuthProvider>
   );
 };
 

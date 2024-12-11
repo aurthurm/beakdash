@@ -5,9 +5,19 @@ import { z } from 'zod';
 import { datasetsTable, datasetsSchema } from '@/app/lib/drizzle/schemas';
 import { db } from '@/app/lib/drizzle';
 
-export async function GET() {
-    try {
-        const data = await db.select().from(datasetsTable); 
+export async function GET(request: Request) {
+    try {    
+        const { searchParams } = new URL(request.url);
+        const userId = searchParams.get("userId");
+
+        if (!userId) {
+          return NextResponse.json(
+            { error: "userId is required" },
+            { status: 400 }
+          );
+        }
+        const data = await db.select().from(datasetsTable)
+        .where(eq(datasetsTable.userId, userId)); 
         return NextResponse.json(data);
     } catch (error) {
         console.error('Database error:', error);

@@ -4,12 +4,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Moon, Bell, ShoppingBag, Menu, LogOut, User, Plus } from 'lucide-react';
 import AddPageModal from '@/app/dashboard/(navigation)/AddPageModal'
 import { usePageStore } from '@/app/store/pageStore'
+import { SignedIn, UserButton, useUser, useClerk } from '@clerk/nextjs'
 
 interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
 const Header = ({ onToggleSidebar }: HeaderProps) => {
+  const { user } = useUser()
+  const { signOut } = useClerk()
   const { addPage } = usePageStore()
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAddPageOpen, setIsAddPageOpen] = useState(false);
@@ -26,7 +29,6 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {};
 
   return (
     <div className="bg-white rounded-xl mb-4 sticky top-0 z-10">
@@ -81,17 +83,11 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
               className="flex items-center gap-2 ml-2 p-2 hover:bg-gray-100 rounded-lg"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
-              {/* <Image
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80"
-                alt="Profile"
-                className="w-8 h-8 rounded-full"
-                width={32}
-                height={32}
-              /> */}
-              <div>
-                <div className="font-medium">Mike Nielsen</div>
-                <div className="text-sm text-gray-500">Admin</div>
-              </div>
+
+              <SignedIn>
+                <UserButton />
+                <div className="font-medium">{user?.fullName}</div>
+              </SignedIn>
             </button>
 
             {isProfileOpen && (
@@ -101,7 +97,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
                   <span>Profile</span>
                 </button>
                 <button 
-                  onClick={handleLogout}
+                  onClick={() => signOut({ redirectUrl: '/' })}
                   className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 text-red-600"
                 >
                   <LogOut size={16} />

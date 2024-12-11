@@ -10,7 +10,7 @@ interface DatasetState {
   loading: Record<string, boolean>;
   error: Record<string, string | null>;
   lastFetch: number;
-  fetchDatasets: (connectionId: string) => Promise<IDataset[]>;
+  fetchDatasets: (userId: string) => Promise<IDataset[]>;
   fetchDataset: (id: string) => Promise<IDataset>;
   fetchDatasetData: (id: string) => Promise<void>;
   addDataset: (dataset: Omit<IDataset, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -29,7 +29,7 @@ export const useDatasetStore = create<DatasetState>()(
         loading: {},
         error: {},
         lastFetch: 0,
-        fetchDatasets: async (connectionId: string) => {
+        fetchDatasets: async (userId: string) => {
           const now = Date.now();
           const store = get();
           
@@ -43,26 +43,26 @@ export const useDatasetStore = create<DatasetState>()(
           set({ lastFetch: now });
 
           set(state => ({
-            loading: { ...state.loading, [connectionId]: true },
-            error: { ...state.error, [connectionId]: null }
+            loading: { ...state.loading, [userId]: true },
+            error: { ...state.error, [userId]: null }
           }));
 
           try {
-            const response = await fetch(`/api/datasets?connectionId=${connectionId}`);
+            const response = await fetch(`/api/datasets?userId=${userId}`);
             if (!response.ok) throw new Error('Failed to fetch datasets');
             const data = await response.json();
             
             set(state => ({
               datasets: [...data],
-              loading: { ...state.loading, [connectionId]: false }
+              loading: { ...state.loading, [userId]: false }
             }));
             return data;
           } catch (error) {
             set(state => ({
-              loading: { ...state.loading, [connectionId]: false },
+              loading: { ...state.loading, [userId]: false },
               error: { 
                 ...state.error, 
-                [connectionId]: error instanceof Error ? error.message : 'Unknown error'
+                [userId]: error instanceof Error ? error.message : 'Unknown error'
               }
             }));
           }

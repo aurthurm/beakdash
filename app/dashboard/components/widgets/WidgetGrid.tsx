@@ -12,14 +12,20 @@ import AICopilotChat from '@/app/dashboard/components/AICopilot/AICopilotChat';
 import { useWidgetStore } from '@/app/store/widgetStore';
 import { IPage, IWidget } from '@/app/lib/drizzle/schemas';
 import { useWidget } from '../../hooks/useWidget';
+import { useAuth } from '@clerk/nextjs';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const WidgetGrid = ({ page }: { page: IPage }) => {
-  const { widgets, updateWidget } = useWidgetStore();
+  const { userId } = useAuth()
+  const { widgets, updateWidget, fetchWidgets } = useWidgetStore();
   const [menuWidgets, setMenuWidgets] = useState<IWidget[]>([]);
   const [layouts, setLayouts] = useState({});
   const {isOpen, setIsOpen, isEditingWidget,form, setForm, handlers} = useWidget()
+
+  useEffect(() => {
+    if(userId) fetchWidgets(userId);
+  }, [userId, widgets, page, fetchWidgets]);
 
   useEffect(() => {
     // Filter widgets belonging to the current menu item
@@ -27,17 +33,30 @@ const WidgetGrid = ({ page }: { page: IPage }) => {
     setMenuWidgets(wgts);
     const llll = { lg: wgts?.map(w => ({...w.layout, i: w.id})) }
     setLayouts(llll)
-  }, [widgets, page]);
+  }, [page, widgets]);
 
   const handleLayoutChange = (layout: any, updated: any) => {
     setLayouts(updated);
     if(updated?.lg) {
       for(const lay of updated.lg){
         const widget = menuWidgets.find(w => w.id === lay.i)
-        if(widget) updateWidget(widget.id!, {...widget, layout: lay})
+        if(widget) {
+          const areEqual = compareObjectKeys(widget.layout, lay, ['x', 'y', 'w', 'h'])
+          if (!areEqual) updateWidget(widget.id!, {...widget, layout: lay});
+        }
       }
     };
   };
+
+  const compareObjectKeys = (obj1: Record<string, string | number>, obj2: Record<string, string | number>, keysToCompare: string[]) => {
+      // Check if all specified keys exist in both objects
+      const hasAllKeys = keysToCompare.every(key => 
+          obj1.hasOwnProperty(key) && obj2.hasOwnProperty(key)
+      );
+      if (!hasAllKeys) return false;
+      // Compare the values for each specified key
+      return keysToCompare.every(key => obj1[key] === obj2[key]);
+  }
 
   return (
     <div className="p-4">

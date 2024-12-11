@@ -9,7 +9,7 @@ import {
 import { usePageStore } from '@/app/store/pageStore'
 import { IPage } from '@/app/lib/drizzle/schemas';
 import { renderIcon } from '@/app/ui/components/icons/Icon';
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, SignedIn, UserButton, useUser } from '@clerk/nextjs'
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen }: SidebarProps) => {  
   const { userId } = useAuth()
+  const { user } = useUser()
   const router = useRouter();
   const pathname = usePathname();
   const { setActive, pages, bottomPages, fetchPages, seedDashboard } = usePageStore()
@@ -162,10 +163,10 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             height={40}
           /> */}
           {isOpen && (
-            <div>
-              <div className="font-medium">Mike Nielsen</div>
-              <div className="text-sm text-gray-500">Admin</div>
-            </div>
+            <SignedIn>
+              <UserButton />
+              <div className="font-medium">{user?.fullName}</div>
+            </SignedIn>
           )}
         </div>
       </div>

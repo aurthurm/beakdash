@@ -167,7 +167,7 @@ export const usePageStore = create<PageState>()(
               set((state) => ({ pages: [data, ...state.pages] }))
             }))
           } catch (error) {
-            console.error(error)
+            console.log(error)
           }
         }
       }),
