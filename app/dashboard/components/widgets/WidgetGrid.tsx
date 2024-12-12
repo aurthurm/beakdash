@@ -16,12 +16,19 @@ import { useAuth } from '@clerk/nextjs';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const WidgetGrid = ({ page }: { page: IPage }) => {
+const WidgetGrid = ({ page, initDashboard }: { page: IPage, initDashboard: () => void }) => {
   const { userId } = useAuth()
   const { widgets, updateWidget, fetchWidgets } = useWidgetStore();
   const [menuWidgets, setMenuWidgets] = useState<IWidget[]>([]);
   const [layouts, setLayouts] = useState({});
   const {isOpen, setIsOpen, isEditingWidget,form, setForm, handlers} = useWidget()
+
+
+  useEffect(() => {
+    if(page === null || page === undefined || (typeof page === 'object' && Object.keys(page).length === 0)) {
+      initDashboard();
+    }
+  }, [page, initDashboard]);
 
   useEffect(() => {
     if(userId) fetchWidgets(userId);

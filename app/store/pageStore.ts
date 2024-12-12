@@ -13,6 +13,7 @@ interface PageState {
   fetchPages: (userId: string) => Promise<IPage[]>;
   addSubPage: (pages: IPage, subpage : IPage) => void;
   seedDashboard: (userId: string) => void;
+  activateDashboard: () => void;
   lastFetch: number;
 }
 
@@ -169,6 +170,23 @@ export const usePageStore = create<PageState>()(
           } catch (error) {
             console.log(error)
           }
+        },
+        activateDashboard: () => {
+          // set dashboard as active
+          set((state) => ({ 
+            pages: state.pages.map(menu => {
+              if(menu.label == 'Dashboard') {
+                menu.active = true;
+              } else {
+                menu.active = false;
+              }
+              return menu;
+            }),
+            bottomPages: state.bottomPages.map(menu => {
+              menu.active = false
+              return menu;
+            }) 
+          }))
         }
       }),
       {

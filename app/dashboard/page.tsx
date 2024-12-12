@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation';
 
 export default function Dashboard() {
   const { userId } = useAuth()
-  const { pages } = usePageStore()
+  const { pages, activateDashboard } = usePageStore()
   const [activePage, setActivePage] = useState({} as IPage);
 
   if (!userId) {
@@ -34,7 +34,7 @@ export default function Dashboard() {
     <div className="flex-1 overflow-auto">
       {/* max-w-7xl  */}
       <div className="mx-auto">
-        <WidgetGrid page={activePage} />
+        <WidgetGrid page={activePage} initDashboard={activateDashboard} />
       </div>
     </div>
   );

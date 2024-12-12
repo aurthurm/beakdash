@@ -44,15 +44,15 @@ const getCommonOptions = () => ({
     },
     extraCssText: 'box-shadow: 0 2px 4px rgba(0,0,0,0.1);'
   },
-  toolbox: {
-    feature: {
-      saveAsImage: {},
-      dataZoom: {},
-      dataView: { readOnly: true },
-      restore: {},
-    },
-    right: '20px'
-  },
+  // toolbox: {
+  //   feature: {
+  //     saveAsImage: {},
+  //     dataZoom: {},
+  //     dataView: { readOnly: true },
+  //     restore: {},
+  //   },
+  //   right: '20px'
+  // },
   legend: {
     type: 'scroll',
     bottom: 0,
