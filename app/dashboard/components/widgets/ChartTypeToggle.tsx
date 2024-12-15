@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, LineChart, PieChart } from 'lucide-react';
+import { BarChart, Heater, LineChart, PieChart, Radar, ScatterChart } from 'lucide-react';
 import { IWidget, wtypes } from '@/app/lib/drizzle/schemas';
 
 interface ChartTypeToggleProps {
@@ -14,6 +14,9 @@ const ChartTypeToggle: React.FC<ChartTypeToggleProps> = ({ currentChart, onChang
     bar: BarChart,
     line: LineChart,
     pie: PieChart,
+    heatmap: Heater, 
+    scatter: ScatterChart, 
+    radar: Radar
   };
 
   if (currentChart == 'count') return null;

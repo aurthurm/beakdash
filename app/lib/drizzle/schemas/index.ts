@@ -99,7 +99,7 @@ export const pagesTable = pgTable("pages", {
     label: varchar("label", { length: 255 }).notNull().unique(),
     route: varchar("route", { length: 255 }),
     icon: varchar("icon", { length: 100 }),
-    active: boolean("active").default(true),
+    active: boolean("active").default(false),
     parentId: varchar("parent_id"),
     userId: varchar("user_id").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -119,7 +119,7 @@ export const pagesTable = pgTable("pages", {
 export type SelectPage = typeof pagesTable.$inferSelect;
 export type InsertPage = typeof pagesTable.$inferInsert;
 
-export const wtypes = ['count', 'line', 'pie', 'bar'] as const;
+export const wtypes = ['count', 'line', 'pie', 'bar', 'heatmap', 'scatter', 'radar'] as const;
 export const widgetSchema = z.object({
   id: z.string().uuid().optional(),
   pageId: z.string().uuid(),

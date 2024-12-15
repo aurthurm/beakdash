@@ -1,34 +1,89 @@
 import { DataPoint } from "@/app/types/data";
 import { ChartDataTransformer } from "@/app/lib/transformers/data-transformer";
 import { IWidget } from "../drizzle/schemas";
+import { cloneDeep } from "lodash";
 
-export const getChartOptions = (widget: IWidget, data: DataPoint[]) => {
+/**
+ * Deeply merges multiple objects, properly handling arrays and nested structures
+ */
+function deepMerge(target: any, ...sources: any[]): any {
+  if (!sources.length) return target;
+  const source = sources.shift();
+
+  if (!source) return target;
+
+  if (Array.isArray(source)) {
+    return cloneDeep(source);
+  }
+
+  if (typeof source !== 'object') return source;
+
+  for (const key in source) {
+    if (Array.isArray(source[key])) {
+      target[key] = cloneDeep(source[key]);
+    } else if (typeof source[key] === 'object' && source[key] !== null) {
+      if (!target[key] || Array.isArray(target[key])) {
+        target[key] = {};
+      }
+      target[key] = deepMerge(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+
+  return deepMerge(target, ...sources);
+}
+
+/**
+ * Generates chart options with proper deep merging of configurations
+ */
+export function getChartOptions(widget: IWidget, data: DataPoint[]): Record<string, any> {
   if (!widget.type) return {};
 
-  const transformerConfig = {type: widget.type, ...widget.transformConfig};
+  // Create fresh copies to avoid mutations
+  const baseOptions = cloneDeep(getBaseOptions(widget));
+  const commonOptions = cloneDeep(getCommonOptions());
+  
+  // Transform data according to widget configuration
+  const transformerConfig = {
+    type: widget.type,
+    ...widget.transformConfig
+  };
   const transformedData = ChartDataTransformer.transform(data, transformerConfig);
 
-  const baseChartOptions = getBaseOptions(widget);
-  const commonOptions = getCommonOptions();
+  // Define chart-specific options
+  const chartSpecificOptions = {
+    tooltip: {
+      trigger: widget.type === 'pie' ? 'item' : 'axis'
+    }
+  };
 
-  return { 
-    ...baseChartOptions, 
-    ...commonOptions,
-    title: { text: widget.title },
-    tooltip: { trigger: widget.type === 'pie' ? 'item' : 'axis' },
-    ...transformedData
+  // Merge all options with proper precedence
+  const finalOptions = deepMerge(
+    {},
+    baseOptions,
+    commonOptions,
+    chartSpecificOptions,
+    transformedData
+  );
+
+  // Log final configuration for debugging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Final Chart Options:', finalOptions);
   }
-};
+
+  return finalOptions;
+}
 
 // Common options shared across all chart types
 const getCommonOptions = () => ({
-  title: {
-    textStyle: {
-      fontSize: 16,
-      fontWeight: 'normal'
-    },
-    left: 'center'
-  },
+  // title: {
+  //   textStyle: {
+  //     fontSize: 16,
+  //     fontWeight: 'normal'
+  //   },
+  //   left: 'center'
+  // },
   grid: {
     left: '3%',
     right: '4%',
@@ -55,7 +110,7 @@ const getCommonOptions = () => ({
   // },
   legend: {
     type: 'scroll',
-    bottom: 0,
+    top: 0,
     textStyle: {
       fontSize: 12
     }
@@ -87,7 +142,7 @@ const getBaseOptions = (widget: IWidget) => {
           type: 'category',
           ...commonAxisConfig,
           axisLabel: {
-            rotate: 45,
+            rotate: widget.transformConfig?.rotateLabels ?? 0,
             margin: 15,
             hideOverlap: true
           }
@@ -124,7 +179,7 @@ const getBaseOptions = (widget: IWidget) => {
           ...commonAxisConfig,
           axisLabel: {
             interval: 0,
-            rotate: widget.transformConfig?.rotateLabels ? 45 : 0,
+            rotate: widget.transformConfig?.rotateLabels ?? 0,
             margin: 15,
             hideOverlap: true
           }

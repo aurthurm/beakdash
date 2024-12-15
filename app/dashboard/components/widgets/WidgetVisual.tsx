@@ -11,6 +11,7 @@ import { WidgetSkeleton } from '@/app/dashboard/components/widgets/states/Widget
 import { getChartOptions } from '@/app/lib/charts/chart-options';
 import { IWidget } from '@/app/lib/drizzle/schemas';
 import { AggregationMethod } from '@/app/types/data';
+import { useAuth } from '@clerk/nextjs';
 
 interface WidgetProps {
   widget: IWidget;
@@ -20,6 +21,7 @@ interface WidgetProps {
 }
 
 const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdate }) => {
+  const { userId } = useAuth()
   const { data, loading, error } = useDataSet(widget); 
   const [echartOption, setEchartOption] = useState<EChartsOption>(null);
 
@@ -97,8 +99,9 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdat
         <div className="flex gap-2">
           <AICopilotButton 
             variant='icon' 
-            widgetId={widget.id}
-            context={`Widget ID: ${widget.id}\nTitle: ${widget.title}\nType: ${widget.type}\nQuery: ${widget.query}`}
+            widget={widget}
+            userId={userId!}
+            pageId={widget.pageId}
           />
           {isChart && (
             <ChartTypeToggle

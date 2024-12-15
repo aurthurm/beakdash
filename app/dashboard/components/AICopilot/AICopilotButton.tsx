@@ -1,19 +1,26 @@
 import React from 'react';
 import { Bot } from 'lucide-react';
-import { useAICopilotStore } from '@/app/store/aiCopilotStore';
+import { useAICopilotStore } from '@/app/store/copilotStore';
+import { IWidget } from '@/app/lib/drizzle/schemas';
+import { useDatasetStore } from '@/app/store/datasets';
 
 interface AICopilotButtonProps {
-  context?: string;
-  widgetId?: string;
+  widget?: IWidget;
   variant?: 'button' | 'icon';
+  userId: string;
+  pageId: string;
 }
 
-const AICopilotButton: React.FC<AICopilotButtonProps> = ({ context, widgetId, variant = 'icon' }) => {
+const AICopilotButton: React.FC<AICopilotButtonProps> = ({ widget, variant = 'icon', userId, pageId }) => {
   const { toggleChat, setContext } = useAICopilotStore();
+  const { datasets } = useDatasetStore();
 
   const handleClick = () => {
-    if (context) {
-      setContext({ type: 'widget', id: widgetId, context });
+    if(widget) {
+      const dataset = datasets.find(d => d.id === widget.datasetId);
+      setContext({ type: 'widget', widget, dataset, userId, pageId });
+    } else {
+      setContext({ type: 'new', userId, pageId });
     }
     toggleChat();
   };

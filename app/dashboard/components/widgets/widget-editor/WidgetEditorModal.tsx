@@ -221,9 +221,10 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
                 Back to Connection Settings
               </button>
               <ChartConfigPanel 
-              form={form}
-              columns={getColumns()}
-              setForm={setForm} />
+                form={form}
+                columns={getColumns()}
+                setForm={setForm}
+               />
             </>)}
           </div>
 

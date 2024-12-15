@@ -23,7 +23,6 @@ const WidgetGrid = ({ page, initDashboard }: { page: IPage, initDashboard: () =>
   const [layouts, setLayouts] = useState({});
   const {isOpen, setIsOpen, isEditingWidget,form, setForm, handlers} = useWidget()
 
-
   useEffect(() => {
     if(page === null || page === undefined || (typeof page === 'object' && Object.keys(page).length === 0)) {
       initDashboard();
@@ -70,7 +69,7 @@ const WidgetGrid = ({ page, initDashboard }: { page: IPage, initDashboard: () =>
       <div className="flex justify-between mb-6">
         <h2 className="text-2xl font-bold">{page?.label} Widgets</h2>
         <div className="flex gap-2">
-          <AICopilotButton variant='button' />
+          <AICopilotButton variant='button' pageId={page.id!} userId={userId!} />
           <button
             onClick={() => setIsOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"

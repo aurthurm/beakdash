@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type {} from '@redux-devtools/extension';
 import { IWidget } from '../lib/drizzle/schemas';
+import { newWidgetPosition } from '../lib/utils';
 
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
@@ -14,6 +15,8 @@ interface WidgetState {
   fetchWidget: (id: string) => Promise<IWidget>;
   addWidget: (widget: Omit<IWidget, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateWidget: (id: string, updates: Partial<IWidget>) => Promise<void>;
+  createdWidget: (widget: IWidget) => Promise<void>;
+  updatedWidget: (widget: IWidget) => Promise<void>;
   deleteWidget: (id: string) => Promise<void>;
   clearError: () => void;
 }
@@ -86,7 +89,7 @@ export const useWidgetStore = create<WidgetState>()(
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 ...widget,
-                layout: newItemPosition(get().widgets, widget.type)
+                layout: newWidgetPosition(get().widgets, widget.type)
               })
             });
             if (!response.ok) throw new Error('Failed to add widget');
@@ -102,6 +105,12 @@ export const useWidgetStore = create<WidgetState>()(
             });
             throw error;
           }
+        },
+
+        createdWidget: async (widget: IWidget) => {
+          set(state => ({
+            widgets: [...state.widgets, widget],
+          }));
         },
 
         updateWidget: async (id: string, updates: Partial<IWidget>) => {
@@ -125,6 +134,13 @@ export const useWidgetStore = create<WidgetState>()(
             });
             throw error;
           }
+        },
+
+        updatedWidget: async (widget: IWidget) => {
+          set(state => ({
+            widgets: state.widgets.map(w => w.id === widget.id ? widget : w),
+            loading: false
+          }));
         },
 
         deleteWidget: async (id: string) => {
@@ -155,42 +171,3 @@ export const useWidgetStore = create<WidgetState>()(
     )
   )
 );
-
-// Helper function for layout positioning
-const newItemPosition = (widgets: IWidget[], type: IWidget['type']) => {
-  const layout = widgets?.map(w => w.layout);
-
-  // Find all occupied positions
-  const occupiedPositions = new Set();
-  layout.forEach(item => {
-    for (let x = item.x; x < item.x + item.w; x++) {
-      for (let y = item.y; y < item.y + item.h; y++) {
-        occupiedPositions.add(`${x},${y}`);
-      }
-    }
-  });
-
-  // Find first available position
-  let newX = 0;
-  let newY = 0;
-  let found = false;
-
-  while (!found) {
-    if (!occupiedPositions.has(`${newX},${newY}`)) {
-      found = true;
-    } else {
-      newX++;
-      if (newX >= 12) { // Assuming max grid width of 12
-        newX = 0;
-        newY++;
-      }
-    }
-  }
-
-  return {
-    x: newX,
-    y: newY,
-    w: type !== 'count' ? 4 : 2,
-    h: type !== 'count' ? 3 : 2,
-  };
-};
