@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/ta
 import { format, FormatOptionsWithLanguage } from 'sql-formatter';
 import DataExplorer from '@/app/dashboard/components/DataExplorer';
 import { DataPoint } from '@/app/types/data';
-import ChartConfigPanel from '@/app/dashboard/components/widgets/widget-editor/ChartConfigPanel';
+import ChartConfigPanel from '@/app/dashboard/components/widgets/widget-editor/config-panel/ChartConfigPanel';
 import DatasetPanel from '@/app/dashboard/components/widgets/widget-editor/DatasetPanel';
 import { getChartOptions } from '@/app/lib/charts/chart-options';
 import { SQLAdapter } from '@/app/lib/adapters/sql';
