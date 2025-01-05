@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## BeakDash
 
-## Getting Started
+![image](https://github.com/user-attachments/assets/3b885179-cc5a-4a68-9c3c-decac78622f1)
 
-First, run the development server:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The **BeakDash** project is a modular, feature-rich dashboard application built using modern web development technologies such as Next.js, TypeScript, and Tailwind CSS. It is designed to facilitate data integration, visualization, and management for users working with complex datasets and diverse data sources. Below is a detailed overview of the project's structure and purpose:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+### **Project Structure Overview**
 
-To learn more about Next.js, take a look at the following resources:
+1. **Root Files**
+   - Core configuration files for the project include `package.json`, `tsconfig.json`, `tailwind.config.ts`, and `drizzle.config.ts`.
+   - Development and build tools like ESLint (`.eslintrc.json`), PostCSS (`postcss.config.mjs`), and Next.js (`next.config.ts`) are pre-configured.
+   - A `README.md` provides documentation, and `notes.txt` includes developer notes or ideas.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Primary Folders**
+   - **`app/`**: Contains the main application code structured for modularity and scalability. Subfolders include:
+     - **`api/`**: Implements backend API endpoints, with categorized folders for `connections`, `datasets`, `keys`, `webhooks`, and `widgets`.
+     - **`dashboard/`**: Hosts the user-facing dashboard interface with layouts, navigation, widgets, and visualization components. Includes hooks and state management.
+     - **`lib/`**: Utility functions, adapters (e.g., CSV, REST, SQL), and shared logic for API keys, webhooks, and data transformation.
+     - **`store/`**: State management modules for connections, datasets, widgets, and other key entities.
+     - **`ui/`**: Shared UI components (buttons, cards, tables) and styles (global CSS).
+   - **`packages/beakdash-sdk/`**: A reusable SDK to interact with the dashboard. Includes examples for different frameworks (React, Vue) and a core SDK library for widgets.
+   - **`public/`**: Assets for public access, such as images or static files.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Key Features**
+   - **Dashboard Widgets**: Users can create, edit, and manage data visualization widgets. The `widget-editor/` provides advanced configuration options (e.g., ChartConfigPanel, FilteringTab).
+   - **Connections**: Supports integration with various data sources through components like CSV, REST, and SQL forms.
+   - **AI Copilot**: Integrates AI-driven assistance via the `copilot/generator/route.ts` and AICopilot components.
+   - **State Management**: Centralized using TypeScript stores (e.g., `pageStore`, `widgetStore`).
+   - **Error Handling**: Features robust error boundaries and fallback mechanisms for user-friendly experiences.
+   - **Schemas and Validation**: JSON schemas and transformations are handled systematically via `schemas/`.
 
-## Deploy on Vercel
+4. **Development Workflow**
+   - **Code Modularity**: Modular components for reusability, scalability, and maintainability.
+   - **Modern Design**: Leverages Tailwind CSS for streamlined and consistent UI design.
+   - **Developer Utilities**: Includes helper functions, hooks (e.g., `useDebounce`, `useWidget`), and type definitions for better DX (developer experience).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+5. **Future Possibilities**
+   - Integration with new data sources or APIs.
+   - Expanding the AI Copilot's capabilities to enhance user interactivity and automation.
+   - Enabling advanced analytics and reporting features.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+### **Purpose**
+The project aims to provide an efficient platform for integrating, visualizing, and managing diverse datasets. It caters to professionals and organizations needing a customizable, AI-enhanced dashboard for data-driven decision-making.
+
+If you'd like further elaboration or help with specific areas of the project, let me know!
