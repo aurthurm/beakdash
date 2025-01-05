@@ -38,13 +38,13 @@ export const usePageStore = create<PageState>()(
               active: false,
               userId: ''
           },
-          { 
-              icon: 'SettingsIcon', 
-              route: '/dashboard/settings',
-              label: 'Settings', 
-              active: false,
-              userId: ''
-          }
+          // { 
+          //     icon: 'SettingsIcon', 
+          //     route: '/dashboard/settings',
+          //     label: 'Settings', 
+          //     active: false,
+          //     userId: ''
+          // }
         ],
         lastFetch: 0,
         setActive: (page, sub) => {

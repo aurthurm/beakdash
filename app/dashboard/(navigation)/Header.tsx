@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Moon, Bell, ShoppingBag, Menu, LogOut, User, Plus } from 'lucide-react';
+import { Search, Menu, LogOut, User, Plus } from 'lucide-react';
 import AddPageModal from '@/app/dashboard/(navigation)/AddPageModal'
 import { usePageStore } from '@/app/store/pageStore'
 import { SignedIn, UserButton, useUser, useClerk } from '@clerk/nextjs'
@@ -50,22 +50,22 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
         </div>
 
         <div className="flex-1 max-w-2xl ml-8">
-          <div className="relative">
+          {/* <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
               placeholder="Try to searching..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
+          </div> */}
         </div>
 
         <div className="flex items-center gap-4">
-          <button aria-label="Toggle dark mode" className="p-2 hover:bg-gray-100 rounded-full">
+          {/* <button aria-label="Toggle dark mode" className="p-2 hover:bg-gray-100 rounded-full">
             <Moon size={20} />
           </button>
           <button className="p-2 hover:bg-gray-100 rounded-full">
-            {/* <Image src="https://flagcdn.com/w20/gb.png" alt="English" width={20} height={20} /> */}
+            <Image src="https://flagcdn.com/w20/gb.png" alt="English" width={20} height={20} /> 
           </button>
           <button className="p-2 hover:bg-gray-100 rounded-full relative">
             <ShoppingBag size={20} />
@@ -76,7 +76,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
           <button aria-label="Notification" className="p-2 hover:bg-gray-100 rounded-full relative">
             <Bell size={20} />
             <span className="absolute top-0 right-0 bg-red-500 w-2 h-2 rounded-full"></span>
-          </button>
+          </button> */}
           
           <div className="relative" ref={profileRef}>
             <button

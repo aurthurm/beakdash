@@ -95,7 +95,6 @@ const WidgetGrid = ({ page, initDashboard }: { page: IPage, initDashboard: () =>
               widget={widget} 
               onEdit={handlers.handleEdit} 
               onDelete={handlers.handleDelete} 
-              onUpdate={handlers.handleUpdate} 
             />
           </div>
         ))}

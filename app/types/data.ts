@@ -1,3 +1,5 @@
+import { IChart } from "../lib/drizzle/schemas";
+
 export interface DataPoint {
     [key: string]: string | number;
 }
@@ -10,7 +12,7 @@ export interface SeriesConfig {
     extraKeys?: string[]; // Additional data columns to include
     color?: string;       // Custom color for series
     visible?: boolean;    // Toggle series visibility
-    type?: string;       // Allow mixed chart types (e.g., line + bar)
+    type?: IChart;       // Allow mixed chart types (e.g., line + bar)
     axis?: 'primary' | 'secondary';  // Support dual axis
     showLabel?: boolean;  // Toggle data labels
     labelPosition?: 'inside' | 'outside' | 'top' | 'bottom';
@@ -117,5 +119,5 @@ export interface TransformConfig {
 }
   
 export interface TransformConf extends TransformConfig {
-  type: string
+  type: IChart
 }

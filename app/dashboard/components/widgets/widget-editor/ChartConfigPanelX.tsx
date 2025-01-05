@@ -14,7 +14,7 @@ import {
 } from "@/app/ui/components/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
 import { AggregationMethod, TransformConfig } from '@/app/types/data';
-import { IWidget } from '@/app/lib/drizzle/schemas';
+import { IChart, IWidget } from '@/app/lib/drizzle/schemas';
 
 interface ChartConfigPanelProps {
   form: IWidget;
@@ -27,11 +27,11 @@ interface ChartConfigPanelProps {
 }
 
 const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setForm }) => {
-  const [chartType, setChartType] = useState<IWidget['type']>(form.type);
+  const [chartType, setChartType] = useState<IChart>(form.type);
   const [config, setConfig] = useState<TransformConfig>(form?.transformConfig || null);
 
   // Generic handlers
-  const onChartTypeChange = (type: IWidget['type']) => {
+  const onChartTypeChange = (type: IChart) => {
     setChartType(type);
     
     // Preserve existing configuration while changing type

@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Helper function for layout positioning
-export const newWidgetPosition = (widgets: IWidget[], type: IWidget['type']) => {
+export const newWidgetPosition = (widgets: IWidget[], type: IChart) => {
   const layout = widgets?.map(w => w.layout);
 
   // Find all occupied positions

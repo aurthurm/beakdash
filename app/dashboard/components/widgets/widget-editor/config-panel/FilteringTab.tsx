@@ -46,7 +46,7 @@ export const FilteringTab: React.FC<{
   
     return (
       <TabsContent value="filtering" className="space-y-4">
-        <Card>
+        <Card className="shadow-sm rounded-sm max-h-[650px] overflow-y-scroll">
           <CardContent className="pt-6 space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">Filters</h3>

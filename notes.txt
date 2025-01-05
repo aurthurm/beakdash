@@ -23,13 +23,6 @@ https://chatgpt.com/c/67484e88-1060-800c-813e-71bf5afc157b
 https://claude.ai/chat/c333d467-e76e-4e0e-8628-2066a803a802
 
 
-prisma create and appply migrations:
-npx prisma migrate dev --name init
-
-
-generate prisma client
-npx prisma generate
-
 
 https://github.com/chartbrew/chartbrew
 https://github.com/getredash/redash/

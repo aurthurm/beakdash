@@ -119,12 +119,17 @@ export const pagesTable = pgTable("pages", {
 export type SelectPage = typeof pagesTable.$inferSelect;
 export type InsertPage = typeof pagesTable.$inferInsert;
 
-export const wtypes = ['count', 'line', 'pie', 'bar', 'heatmap', 'scatter', 'radar'] as const;
+// 'count', 'line', 'pie', 'bar', 'heatmap', 'scatter', 'radar', 'tree', 'sunburst
+export const chartTypes = ['line', 'pie', 'bar'] as const;
+export const  visualTypes = ['count', ...chartTypes] as const;
+export type IChart = typeof chartTypes[number];
+export type IVisual = typeof visualTypes[number];
+
 export const widgetSchema = z.object({
   id: z.string().uuid().optional(),
   pageId: z.string().uuid(),
   userId: z.string().min(1),
-  type: z.enum(wtypes),
+  type: z.enum(chartTypes),
   title: z.string().min(1),
   subtitle: z.string().optional(),
   layout: z.object({

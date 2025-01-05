@@ -1,6 +1,6 @@
 import { IWidget } from "@/app/lib/drizzle/schemas";
 import { TransformConfig, SeriesConfig } from "@/app/types/data";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@radix-ui/react-select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 
 
 interface ChartConfigPanelProps {

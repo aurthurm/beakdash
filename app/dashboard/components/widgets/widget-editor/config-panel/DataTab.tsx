@@ -1,17 +1,17 @@
-import { IWidget } from "@/app/lib/drizzle/schemas";
+import { IChart, IWidget } from "@/app/lib/drizzle/schemas";
 import { TransformConfig, SeriesConfig, AggregationMethod } from "@/app/types/data";
 import { Card, CardContent } from "@/app/ui/components/card";
-import { Separator, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@radix-ui/react-select";
-import { Switch } from "@radix-ui/react-switch";
-import { TabsContent } from "@radix-ui/react-tabs";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
+import { Switch } from "@/app/ui/components/switch";
+import { TabsContent } from "@/app/ui/components/tabs";
 import { DataAxisMapping } from "./DataAxisMapping";
-import { DataHeatmapMapping } from "./DataHeatmapMapping";
+// import { DataHeatmapMapping } from "./DataHeatmapMapping";
 import { DataPieMapping } from "./DataPieMapping";
-import { SecondaryAxisConfig } from "./SecondaryAxisConfig";
-import { StackingConfig } from "./StackingConfig";
+import { BarGroupingConfig } from "./BarGroupingConfig";
 import { DataHierarchicalMapping } from "./DataHierarchicalMapping";
-import { DataRadarMapping } from "./DataRadarMapping";
-import { DataScatterMapping } from "./DataScatterMapping";
+// import { DataRadarMapping } from "./DataRadarMapping";
+// import { DataScatterMapping } from "./DataScatterMapping";
+import { Separator } from "@/app/ui/components/separator";
 
 const AGG_METHODS: Array<{ value: AggregationMethod; label: string }> = [
     { value: 'sum', label: 'Sum' },
@@ -24,7 +24,6 @@ const AGG_METHODS: Array<{ value: AggregationMethod; label: string }> = [
   ];
   
 interface ChartConfigPanelProps {
-    form: IWidget;
     columns: {
       all: string[];
       numeric: string[];
@@ -38,18 +37,18 @@ export const DataTab: React.FC<{
     columns: ChartConfigPanelProps['columns'];
     updateConfig: (config: Partial<TransformConfig>) => void;
     updateSeriesConfig: (index: number, updates: Partial<SeriesConfig>) => void;
-    chartType: IWidget['type'];
+    chartType: IChart;
   }> = ({ config, columns, updateConfig, updateSeriesConfig, chartType }) => {
     const isAxisChart = ['bar', 'line', 'area'].includes(chartType);
     const isPieChart = ['pie', 'donut'].includes(chartType);
-    const isHeatmap = chartType === 'heatmap';
-    const isScatter = chartType === 'scatter';
-    const isRadar = chartType === 'radar';
+    // const isHeatmap = chartType === 'heatmap';
+    // const isScatter = chartType === 'scatter';
+    // const isRadar = chartType === 'radar';
     const isHierarchical = ['tree', 'sunburst'].includes(chartType);
   
     return (
       <TabsContent value="data" className="space-y-4">
-        <Card>
+        <Card className="shadow-sm rounded-sm max-h-[650px] overflow-y-scroll">
           <CardContent className="pt-6 space-y-4">
             {/* Data Mapping Section */}
             {isAxisChart && (
@@ -60,16 +59,31 @@ export const DataTab: React.FC<{
                   updateSeriesConfig={updateSeriesConfig}
                 />
                 <Separator />
-                <StackingConfig
-                  config={config}
-                  columns={columns}
-                  updateSeriesConfig={updateSeriesConfig}
-                />
-                <Separator />
-                <SecondaryAxisConfig
-                  config={config}
-                  updateSeriesConfig={updateSeriesConfig}
-                />
+                {chartType === 'bar' && (
+                    <>
+                      <BarGroupingConfig
+                          config={config}
+                          columns={columns}
+                          updateSeriesConfig={updateSeriesConfig}
+                      />
+                      <Separator />
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Rotate Labels</label>
+                        <input 
+                          aria-label='Rotate Labels'
+                          type="number" 
+                          className="w-full p-2 border rounded"
+                          min={-90}
+                          max={90}
+                          step={5}
+                          value={config?.rotateLabels ?? 0}
+                          onChange={(e) => updateConfig({
+                            rotateLabels: parseInt(e.target.value)
+                          })}
+                        />
+                      </div>
+                    </>
+                )}
                 <Separator />
               </>
             )}
@@ -85,7 +99,7 @@ export const DataTab: React.FC<{
               </>
             )}
   
-            {isHeatmap && (
+            {/* {isHeatmap && (
               <>
                 <DataHeatmapMapping
                   config={config}
@@ -94,9 +108,9 @@ export const DataTab: React.FC<{
                 />
                 <Separator />
               </>
-            )}
+            )} */}
   
-            {isScatter && (
+            {/* {isScatter && (
               <>
                 <DataScatterMapping
                   config={config}
@@ -105,9 +119,9 @@ export const DataTab: React.FC<{
                 />
                 <Separator />
               </>
-            )}
+            )} */}
   
-            {isRadar && (
+            {/* {isRadar && (
               <>
                 <DataRadarMapping
                   config={config}
@@ -116,7 +130,7 @@ export const DataTab: React.FC<{
                 />
                 <Separator />
               </>
-            )}
+            )} */}
   
             {isHierarchical && (
               <>
@@ -133,6 +147,7 @@ export const DataTab: React.FC<{
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Enable Aggregation</label>
+                <span className="text-sx italic text-slate-400">For non SQL datasets</span>
                 <Switch
                   checked={config.aggregation?.enabled ?? false}
                   onCheckedChange={(checked) => {

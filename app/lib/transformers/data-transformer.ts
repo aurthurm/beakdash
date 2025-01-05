@@ -1,12 +1,13 @@
 import { DataPoint, TransformConf, SeriesConfig, Formatting, Filters, FilterGroup, SortingOrder, AggregationMethod } from "@/app/types/data";
 import type { EChartsOption } from 'echarts';
 
-// 1. Add type for hierarchical data
 interface HierarchicalNode {
   name: string;
   value: number;
   children: HierarchicalNode[];
 }
+
+type SeriesChartType = 'line' | 'bar';
 
 export class ChartDataTransformer {
   // Cache for memoized results
@@ -50,7 +51,7 @@ export class ChartDataTransformer {
         );
     }
 
-    // Finally sorting
+    // Then sorting
     if (config.sorting?.enabled) {
         processedData = this.sort(
             processedData,
@@ -95,13 +96,14 @@ export class ChartDataTransformer {
           valueKey: Object.keys(data[0])[1]
       }];
 
-      // Enhanced series handling
+      const isGrouped = !seriesConfigs[0].stackKey && seriesConfigs[0].nameKey;
+
       const result: {
         xAxis: { type: 'category'; data: string[]; axisLabel?: { rotate: number } };
-        yAxis: { type: 'value'; splitLine?: { show: boolean } };
+        yAxis: [{ type: 'value'; splitLine?: { show: boolean } }];
         series: Array<{
           name: string;
-          type: 'bar' | 'line';
+          type: SeriesChartType;
           data: number[];
           yAxisIndex?: number;
         }>;
@@ -111,11 +113,11 @@ export class ChartDataTransformer {
               data: [] as string[],
               axisLabel: config.rotateLabels ? { rotate: config.rotateLabels } : undefined
           },
-          yAxis: {
+          yAxis: [{
               type: 'value',
               // Add support for dual axis if needed
               ...(config.series?.some(s => s.axis === 'secondary') ? { splitLine: { show: false } } : {})
-          },
+          }],
           series: []
       };
 
@@ -149,13 +151,41 @@ export class ChartDataTransformer {
       });
 
       result.xAxis.data = Array.from(categories);
-      result.series = Array.from(seriesData.entries()).map(([name, values]) => ({
+      result.series = Array.from(seriesData.entries()).map(([name, values], index) => {
+          const seriesType = (seriesConfigs[index]?.type || config.type) as SeriesChartType;
+          return {
           name,
-          type: config.type === 'bar' ? 'bar' : 'line' as const,
+          type: seriesType, // Use series-specific type or fall back to main type
           data: result.xAxis.data.map(cat => values.get(cat) ?? 0),
-          ...(config.series?.find(s => s.nameKey === name)?.axis === 'secondary' ? 
-              { yAxisIndex: 1 } : {})
-      }));
+          ...(seriesConfigs[index]?.axis === 'secondary' ? { yAxisIndex: 1 } : {}),
+          // Add any other series-specific configurations
+          ...(seriesConfigs[index]?.color ? { itemStyle: { color: seriesConfigs[index].color } } : {}),
+          ...(seriesConfigs[index]?.showLabel ? {
+              label: {
+                  show: true,
+                  position: seriesConfigs[index].labelPosition || 'top'
+              }
+          } : {})
+        }}
+      );
+
+      // If grouped, add specific bar chart settings
+      if (isGrouped && config.type === 'bar') {
+        // Optional: Add settings for bar width and spacing
+        result.series = result.series.map(series => ({
+          ...series,
+          barGap: '10%',  // Gap between bars in different groups
+          barCategoryGap: '20%'  // Gap between bar groups
+        }));
+      }
+
+      // Add secondary axis if needed
+      if (seriesConfigs.some(s => s.axis === 'secondary')) {
+        result.yAxis.push({
+            type: 'value',
+            splitLine: { show: false }
+        });
+      }
 
       return result;
   }
@@ -340,24 +370,24 @@ export class ChartDataTransformer {
   /**
    * Transforms data for hierarchical charts (tree, sunburst)
    */
-  private static transformToHierarchical(data: DataPoint[], config: TransformConf): EChartsOption {
-    const buildHierarchy = (items: DataPoint[], parentId: any = null): HierarchicalNode[] => {
-      return items
-        .filter(item => item.parentId === parentId)
-        .map(item => ({
-          name: String(item.name),
-          value: Number(item.value),
-          children: this.buildHierarchy(items, item.id)
-        }));
-    };
+  // private static transformToHierarchical(data: DataPoint[], config: TransformConf): EChartsOption {
+  //   const buildHierarchy = (items: DataPoint[], parentId: any = null): HierarchicalNode[] => {
+  //     return items
+  //       .filter(item => item.parentId === parentId)
+  //       .map(item => ({
+  //         name: String(item.name),
+  //         value: Number(item.value),
+  //         children: this.buildHierarchy(items, item.id)
+  //       }));
+  //   };
 
-    return {
-      series: [{
-        type: config.type === 'tree' ? 'tree' : 'sunburst' as const,
-        data: buildHierarchy(data)
-      }]
-    };
-  }
+  //   return {
+  //     series: [{
+  //       type: config.type === 'tree' ? 'tree' : 'sunburst' as const,
+  //       data: buildHierarchy(data)
+  //     }]
+  //   };
+  // }
 
   /**
    * Aggregates data based on specified method and grouping
@@ -591,16 +621,34 @@ private static evaluateFilter(itemValue: any, filterValue: any, filter: Filters)
    */
   private static sort(
     data: DataPoint[],
-    key: string,
+    key: keyof DataPoint | 'none',
     order: SortingOrder
   ): DataPoint[] {
-    if (order === 'none') return data;
+    if (order === 'none' || key === 'none') return data;
+
     return [...data].sort((a, b) => {
       const aVal = a[key];
       const bVal = b[key];
-      return order === 'asc' ? 
-        (aVal > bVal ? 1 : -1) :
-        (aVal < bVal ? 1 : -1);
+
+      // Handle undefined or null values
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return order === 'asc' ? -1 : 1;
+      if (bVal == null) return order === 'asc' ? 1 : -1;
+
+      // Handle strings (case-insensitive sorting)
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const comparison = aVal.localeCompare(bVal, undefined, { sensitivity: 'base' });
+        return order === 'asc' ? comparison : -comparison;
+      }
+
+      // Handle numbers and other comparable types
+      return order === 'asc'
+        ? aVal > bVal
+          ? 1
+          : -1
+        : aVal < bVal
+        ? 1
+        : -1;
     });
   }
 

@@ -1,6 +1,6 @@
 import { IWidget } from "@/app/lib/drizzle/schemas";
 import { TransformConfig, SeriesConfig } from "@/app/types/data";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@radix-ui/react-select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 
 interface ChartConfigPanelProps {
     form: IWidget;
@@ -21,8 +21,8 @@ export const DataAxisMapping: React.FC<{
       <div className="space-y-2">
         <label className="text-sm font-medium">X-Axis Field</label>
         <Select
-          value={config.series?.[0]?.nameKey}
-          onValueChange={(value) => updateSeriesConfig(0, { nameKey: value })}
+          value={config.series?.[0]?.categoryKey}
+          onValueChange={(value) => updateSeriesConfig(0, { categoryKey: value })}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select X-Axis field" />

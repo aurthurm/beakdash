@@ -73,7 +73,7 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
 
   return (
     <Tabs defaultValue="chart">
-      <TabsList className="w-full grid grid-cols-6">
+      <TabsList className="w-full grid grid-cols-6 mb-1">
         <TabsTrigger value="chart">
           <BarChart className="w-4 h-4 mr-2" />
           Chart
@@ -90,14 +90,14 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
           <Filter className="w-4 h-4 mr-2" />
           Filters
         </TabsTrigger>
-        <TabsTrigger value="formatting">
+        {/* <TabsTrigger value="formatting">
           <Settings className="w-4 h-4 mr-2" />
           Format
         </TabsTrigger>
         <TabsTrigger value="advanced">
           <Magnet className="w-4 h-4 mr-2" />
           Advanced
-        </TabsTrigger>
+        </TabsTrigger> */}
       </TabsList>
 
       <ChartTypeTab
@@ -131,6 +131,7 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
 
       <FormattingTab
         config={config}
+        columns={columns.all}
         updateConfig={updateConfig}
       />
 

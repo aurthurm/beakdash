@@ -1,7 +1,7 @@
 import { IWidget } from "@/app/lib/drizzle/schemas";
 import { TransformConfig } from "@/app/types/data";
 import { Card, CardContent } from "@/app/ui/components/card";
-import { TabsContent } from "@radix-ui/react-tabs";
+import { TabsContent } from "@/app/ui/components/tabs";
 
 
 interface ChartConfigPanelProps {
@@ -20,7 +20,7 @@ export const AdvancedTab: React.FC<{
     updateConfig: (config: Partial<TransformConfig>) => void;
   }> = () => (
     <TabsContent value="advanced">
-      <Card>
+      <Card className="shadow-sm rounded-sm max-h-[650px] overflow-y-scroll">
         <CardContent className="pt-6">
           {/* Add advanced options here */}
         </CardContent>

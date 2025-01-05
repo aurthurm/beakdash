@@ -1,6 +1,6 @@
 import { IWidget } from "@/app/lib/drizzle/schemas";
 import { Filters, FiltersOps } from "@/app/types/data";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@radix-ui/react-select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 
 const FILTER_OPERATORS: Array<{ value: FiltersOps; label: string }> = [
     { value: 'equals', label: 'Equals' },

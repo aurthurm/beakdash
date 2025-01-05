@@ -4,9 +4,15 @@ import WidgetGrid from '@/app/dashboard/components/widgets/WidgetGrid';
 import { usePageStore } from '@/app/store/pageStore'
 import { useEffect, useState } from 'react';
 import { IPage } from '../lib/drizzle/schemas';
+import { useDatasetStore } from '../store/datasets';
+import { useConnectionStore } from '../store/connections';
+import { useAuth } from '@clerk/nextjs';
 
 export default function Dashboard() {
+  const { userId } = useAuth()
   const { pages, activateDashboard } = usePageStore()
+  const { fetchDatasets } = useDatasetStore();
+  const { fetchConnections } = useConnectionStore();
   const [activePage, setActivePage] = useState({} as IPage);
 
   useEffect(() => {
@@ -22,6 +28,12 @@ export default function Dashboard() {
       }
     });
   }, [pages]);
+
+  useEffect(() => {
+    if(!userId) return;
+    fetchDatasets(userId);
+    fetchConnections(userId);
+  },[userId, fetchDatasets, fetchConnections]);
 
   return (
     <div className="flex-1 overflow-auto">

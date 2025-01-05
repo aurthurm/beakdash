@@ -2,7 +2,7 @@ import { IWidget } from '@/app/lib/drizzle/schemas';
 import React from 'react';
 
 interface WidgetSkeletonProps {
-  type: IWidget['type'];
+  type: IChart;
 }
 
 export const WidgetSkeleton: React.FC<WidgetSkeletonProps> = ({ type }) => {

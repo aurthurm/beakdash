@@ -3,29 +3,26 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import ReactECharts, { EChartsOption } from 'echarts-for-react';
 import { Settings, Grip, Trash2 } from 'lucide-react';
-import ChartTypeToggle from '@/app/dashboard/components/widgets/ChartTypeToggle';
 import { useDataSet } from '@/app/lib/hooks/useDataSet';
 import AICopilotButton from '@/app/dashboard/components/AICopilot/AICopilotButton';
 import { WidgetError } from '@/app/dashboard/components/widgets/states/WidgetError';
 import { WidgetSkeleton } from '@/app/dashboard/components/widgets/states/WidgetSkeleton';
 import { getChartOptions } from '@/app/lib/charts/chart-options';
-import { IWidget } from '@/app/lib/drizzle/schemas';
-import { AggregationMethod } from '@/app/types/data';
 import { useAuth } from '@clerk/nextjs';
+import { IVisual, IWidget } from '@/app/lib/drizzle/schemas';
 
 interface WidgetProps {
   widget: IWidget;
   onEdit: (widget: IWidget) => void;
   onDelete: (id: string) => void;
-  onUpdate: (id: string, data: IWidget) => void;
 }
 
-const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdate }) => {
+const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete }) => {
   const { userId } = useAuth()
   const { data, loading, error } = useDataSet(widget); 
   const [echartOption, setEchartOption] = useState<EChartsOption>(null);
 
-  const isChart = widget.type !== 'count';
+  const isChart = (widget.type as IVisual) !== 'count';
 
   const getEChartOption = useCallback(() => {
     const chartOpts = getChartOptions(widget, data);
@@ -36,42 +33,6 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdat
   useEffect(() => {
     getEChartOption();
   }, [getEChartOption, widget.transformConfig]);
-
-  const onToggleChartType = (type: IWidget['type']) => {    
-    // Preserve existing configuration while changing type
-    const newConfig = { ...widget.transformConfig };
-    if (!newConfig.series) newConfig.series = [{}];
-
-    // Preserve x-axis/category and y-axis/value when switching between chart types
-    if (type === 'pie') {
-      // When switching to pie chart
-      newConfig.series[0] = {
-        ...newConfig.series[0],
-        nameKey: newConfig.series[0].categoryKey || newConfig.series[0].nameKey,
-        valueKey: newConfig.series[0].valueKey
-      };
-      delete newConfig.series[0].categoryKey;
-    } else {
-      // When switching to bar/line chart
-      newConfig.series[0] = {
-        ...newConfig.series[0],
-        categoryKey: newConfig.series[0].nameKey || newConfig.series[0].categoryKey,
-        valueKey: newConfig.series[0].valueKey
-      };
-      delete newConfig.series[0].nameKey;
-    }
-
-    // Keep other configurations
-    newConfig.rotateLabels = widget.transformConfig?.rotateLabels ?? 0;
-    newConfig.aggregation = widget.transformConfig?.aggregation || {
-      enabled: false,
-      method: 'none' as AggregationMethod,
-      groupBy: []
-    };
-
-    // update widget with new type and configuration
-    onUpdate(widget.id!, { ...widget, type, transformConfig: newConfig });
-  };
 
   if (loading) {
     return <WidgetSkeleton type={widget.type} />;
@@ -103,12 +64,6 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete, onUpdat
             userId={userId!}
             pageId={widget.pageId}
           />
-          {isChart && (
-            <ChartTypeToggle
-              currentChart={widget.type!}
-              onChange={onToggleChartType}
-            />
-          )}
           <button
             onClick={() => onEdit(widget)}
             className="p-2 hover:bg-gray-100 rounded-lg"
