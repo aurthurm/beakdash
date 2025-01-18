@@ -7,7 +7,7 @@ import { useDataSet } from '@/app/lib/hooks/useDataSet';
 import AICopilotButton from '@/app/dashboard/components/AICopilot/AICopilotButton';
 import { WidgetError } from '@/app/dashboard/components/widgets/states/WidgetError';
 import { WidgetSkeleton } from '@/app/dashboard/components/widgets/states/WidgetSkeleton';
-import { getChartOptions } from '@/app/lib/charts/chart-options';
+import { getChartOptions } from '@/app/lib/charts/options';
 import { useAuth } from '@clerk/nextjs';
 import { IVisual, IWidget } from '@/app/lib/drizzle/schemas';
 
@@ -91,6 +91,8 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete }) => {
           <ReactECharts
             option={echartOption}
             style={{ height: 'calc(100% - 0rem)' }}
+            notMerge={true}
+            lazyUpdate={true}
           />
         ) : (
           <div className="mt-4">

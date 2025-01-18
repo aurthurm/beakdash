@@ -15,7 +15,7 @@ import DataExplorer from '@/app/dashboard/components/DataExplorer';
 import { DataPoint } from '@/app/types/data';
 import ChartConfigPanel from '@/app/dashboard/components/widgets/widget-editor/config-panel/ChartConfigPanel';
 import DatasetPanel from '@/app/dashboard/components/widgets/widget-editor/DatasetPanel';
-import { getChartOptions } from '@/app/lib/charts/chart-options';
+import { getChartOptions } from '@/app/lib/charts/options';
 import { SQLAdapter } from '@/app/lib/adapters/sql';
 import { IConnection, IDataset, IPage, IWidget } from '@/app/lib/drizzle/schemas';
 import { Alert, AlertDescription } from '@/app/ui/components/alert';
