@@ -30,8 +30,8 @@ const WidgetGrid = ({ page, initDashboard }: { page: IPage, initDashboard: () =>
   }, [page, initDashboard]);
 
   useEffect(() => {
-    if(userId) fetchWidgets(userId);
-  }, [userId, widgets, page, fetchWidgets]);
+    if(page.id) fetchWidgets(page.id);
+  }, [page, fetchWidgets]);
 
   useEffect(() => {
     // Filter widgets belonging to the current menu item

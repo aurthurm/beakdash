@@ -49,7 +49,7 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete }) => {
   }
 
   return (
-    <div id={widget.id} className="h-full">
+    <div id={widget.id} className="h-full flex flex-col">
       <div className="flex justify-between items-start px-4 pt-4 pb-2">
         <div>
           <h3 className="font-semibold">{widget.title}</h3>
@@ -86,11 +86,11 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete }) => {
         </div>
       </div>
       <hr />
-      <div className='p-4 h-full'>
+      <div className='p-4 flex-1'>
         {isChart && echartOption ? (
           <ReactECharts
             option={echartOption}
-            style={{ height: 'calc(100% - 4rem)' }}
+            style={{ height: 'calc(100% - 0rem)' }}
           />
         ) : (
           <div className="mt-4">

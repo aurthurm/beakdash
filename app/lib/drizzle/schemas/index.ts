@@ -82,6 +82,7 @@ interface PageSchemaType {
 export const pageSchema: z.ZodType<PageSchemaType> = z.lazy(() => z.object({
   id: z.string().uuid().optional(),
   label: z.string().min(1),
+  route: z.string().min(1),
   icon: z.string(),
   active: z.boolean().default(false),
   parentId: z.string().uuid().optional(),

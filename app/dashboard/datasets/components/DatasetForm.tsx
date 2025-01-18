@@ -78,6 +78,7 @@ export function DatasetForm({ form, setForm }: DatasetFormProps) {
     if (conn) {
       setConnection(conn);
       setSchemaInfo(null);
+      updateForm({ type: conn.type, connectionId: conn.id })
       await fetchSQLConnectionSchemas(conn);
     } else {
       setConnection(null);

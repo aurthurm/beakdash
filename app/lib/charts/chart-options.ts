@@ -90,15 +90,15 @@ const getCommonOptions = () => ({
     bottom: '3%',
     containLabel: true
   },
-  tooltip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    textStyle: {
-      color: '#333'
-    },
-    extraCssText: 'box-shadow: 0 2px 4px rgba(0,0,0,0.1);'
-  },
+  // tooltip: {
+  //   backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  //   borderColor: '#ccc',
+  //   borderWidth: 1,
+  //   textStyle: {
+  //     color: '#333'
+  //   },
+  //   extraCssText: 'box-shadow: 0 2px 4px rgba(0,0,0,0.1);'
+  // },
   // toolbox: {
   //   feature: {
   //     saveAsImage: {},
@@ -108,13 +108,13 @@ const getCommonOptions = () => ({
   //   },
   //   right: '20px'
   // },
-  legend: {
-    type: 'scroll',
-    top: 0,
-    textStyle: {
-      fontSize: 12
-    }
-  }
+  // legend: {
+  //   type: 'scroll',
+  //   top: 0,
+  //   textStyle: {
+  //     fontSize: 12
+  //   }
+  // }
 });
 
 const getBaseOptions = (widget: IWidget) => {
@@ -207,14 +207,6 @@ const getBaseOptions = (widget: IWidget) => {
 
     case 'pie':
       return {
-        legend: {
-          type: 'scroll',
-          orient: 'horizontal',
-          bottom: 0,
-          textStyle: {
-            fontSize: 12
-          }
-        },
         series: [{
           type: 'pie',
           radius: ['40%', '70%'],
