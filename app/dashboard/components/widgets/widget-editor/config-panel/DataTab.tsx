@@ -1,16 +1,12 @@
 import { IChart, IWidget } from "@/app/lib/drizzle/schemas";
-import { TransformConfig, SeriesConfig, AggregationMethod } from "@/app/types/data";
+import { TransformConfig, AggregationMethod, AntChartOptions } from "@/app/types/data";
 import { Card, CardContent } from "@/app/ui/components/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 import { Switch } from "@/app/ui/components/switch";
 import { TabsContent } from "@/app/ui/components/tabs";
 import { DataAxisMapping } from "./DataAxisMapping";
-// import { DataHeatmapMapping } from "./DataHeatmapMapping";
 import { DataPieMapping } from "./DataPieMapping";
 import { BarGroupingConfig } from "./BarGroupingConfig";
-import { DataHierarchicalMapping } from "./DataHierarchicalMapping";
-// import { DataRadarMapping } from "./DataRadarMapping";
-// import { DataScatterMapping } from "./DataScatterMapping";
 import { Separator } from "@/app/ui/components/separator";
 
 const AGG_METHODS: Array<{ value: AggregationMethod; label: string }> = [
@@ -36,15 +32,11 @@ export const DataTab: React.FC<{
     config: TransformConfig;
     columns: ChartConfigPanelProps['columns'];
     updateConfig: (config: Partial<TransformConfig>) => void;
-    updateSeriesConfig: (index: number, updates: Partial<SeriesConfig>) => void;
+    updateAntChartOptions: (updates: Partial<AntChartOptions>) => void;
     chartType: IChart;
-  }> = ({ config, columns, updateConfig, updateSeriesConfig, chartType }) => {
-    const isAxisChart = ['bar', 'line', 'area'].includes(chartType);
+  }> = ({ config, columns, updateConfig, updateAntChartOptions, chartType }) => {
+    const isAxisChart = ['column', 'bar', 'line', 'scatter'].includes(chartType);
     const isPieChart = ['pie', 'donut'].includes(chartType);
-    // const isHeatmap = chartType === 'heatmap';
-    // const isScatter = chartType === 'scatter';
-    // const isRadar = chartType === 'radar';
-    const isHierarchical = ['tree', 'sunburst'].includes(chartType);
   
     return (
       <TabsContent value="data" className="space-y-4">
@@ -56,7 +48,7 @@ export const DataTab: React.FC<{
                 <DataAxisMapping
                   config={config}
                   columns={columns}
-                  updateSeriesConfig={updateSeriesConfig}
+                  updateAntChartOptions={updateAntChartOptions}
                 />
                 <Separator />
                 {chartType === 'bar' && (
@@ -64,7 +56,7 @@ export const DataTab: React.FC<{
                       <BarGroupingConfig
                           config={config}
                           columns={columns}
-                          updateSeriesConfig={updateSeriesConfig}
+                          updateAntChartOptions={updateAntChartOptions}
                       />
                       <Separator />
                       <div>
@@ -76,10 +68,10 @@ export const DataTab: React.FC<{
                           min={-90}
                           max={90}
                           step={5}
-                          value={config?.rotateLabels ?? 0}
-                          onChange={(e) => updateConfig({
-                            rotateLabels: parseInt(e.target.value)
-                          })}
+                          // value={config?.rotateLabels ?? 0}
+                          // onChange={(e) => updateConfig({
+                          //   rotateLabels: parseInt(e.target.value)
+                          // })}
                         />
                       </div>
                     </>
@@ -93,56 +85,12 @@ export const DataTab: React.FC<{
                 <DataPieMapping
                   config={config}
                   columns={columns}
-                  updateSeriesConfig={updateSeriesConfig}
+                  updateAntChartOptions={updateAntChartOptions}
                 />
                 <Separator />
               </>
             )}
-  
-            {/* {isHeatmap && (
-              <>
-                <DataHeatmapMapping
-                  config={config}
-                  columns={columns}
-                  updateSeriesConfig={updateSeriesConfig}
-                />
-                <Separator />
-              </>
-            )} */}
-  
-            {/* {isScatter && (
-              <>
-                <DataScatterMapping
-                  config={config}
-                  columns={columns}
-                  updateSeriesConfig={updateSeriesConfig}
-                />
-                <Separator />
-              </>
-            )} */}
-  
-            {/* {isRadar && (
-              <>
-                <DataRadarMapping
-                  config={config}
-                  columns={columns}
-                  updateSeriesConfig={updateSeriesConfig}
-                />
-                <Separator />
-              </>
-            )} */}
-  
-            {isHierarchical && (
-              <>
-                <DataHierarchicalMapping
-                  config={config}
-                  columns={columns}
-                  updateSeriesConfig={updateSeriesConfig}
-                />
-                <Separator />
-              </>
-            )}
-  
+            
             {/* Aggregation Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">

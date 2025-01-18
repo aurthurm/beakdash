@@ -1,5 +1,5 @@
 import { IWidget } from "@/app/lib/drizzle/schemas";
-import { TransformConfig, SeriesConfig } from "@/app/types/data";
+import { TransformConfig, AntChartOptions } from "@/app/types/data";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 
 interface ChartConfigPanelProps {
@@ -15,15 +15,15 @@ interface ChartConfigPanelProps {
 export const DataRadarMapping: React.FC<{
     config: TransformConfig;
     columns: ChartConfigPanelProps['columns'];
-    updateSeriesConfig: (index: number, updates: Partial<SeriesConfig>) => void;
-  }> = ({ config, columns, updateSeriesConfig }) => (
+    updateAntChartOptions: (updates: Partial<AntChartOptions>) => void;
+  }> = ({ config, columns, updateAntChartOptions }) => (
     <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">Category Field</label>
         <Select
-          value={config.series?.[0]?.nameKey}
+          value={config.options?.yField}
           onValueChange={(value) => {
-            updateSeriesConfig(0, { nameKey: value });
+            updateAntChartOptions({ yField: value });
           }}
         >
           <SelectTrigger>
@@ -35,24 +35,6 @@ export const DataRadarMapping: React.FC<{
             ))}
           </SelectContent>
         </Select>
-      </div>
-  
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Metric Fields</label>
-        <select
-          multiple
-          aria-label="Metric Fields"
-          className="w-full p-2 border rounded"
-          value={config.series?.[0]?.extraKeys || []}
-          onChange={(e) => {
-            const selected = Array.from(e.target.selectedOptions).map(opt => opt.value);
-            updateSeriesConfig(0, { extraKeys: selected });
-          }}
-        >
-          {columns.numeric.map(col => (
-            <option key={col} value={col}>{col}</option>
-          ))}
-        </select>
       </div>
     </div>
   );

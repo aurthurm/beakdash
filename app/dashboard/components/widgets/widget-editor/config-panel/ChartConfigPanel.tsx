@@ -2,13 +2,13 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-  Settings, Columns, BarChart, Magnet,
+  Columns, BarChart,
   LineChart, Filter
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
 import {
   TransformConfig,
-  SeriesConfig,
+  AntChartOptions,
 } from '@/app/types/data';
 import { IWidget } from '@/app/lib/drizzle/schemas';
 import { AdvancedTab } from './AdvancedTab';
@@ -20,8 +20,7 @@ import { SeriesTab } from './SeriesTab';
 
 
 const DEFAULT_CONFIG: TransformConfig = {
-  series: [{}],
-  rotateLabels: 45,
+  options: {},
   aggregation: {
     enabled: false,
     method: undefined,
@@ -64,10 +63,10 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
     setForm({ ...form, transformConfig: updatedConfig });
   }, [config, form, setForm]);
 
-  const updateSeriesConfig = useCallback((index: number, updates: Partial<SeriesConfig>) => {
+  const updateAntChartOptions = useCallback((updates: Partial<AntChartOptions>) => {
     const newConfig = { ...config };
-    if (!newConfig.series) newConfig.series = [{}];
-    newConfig.series[index] = { ...newConfig.series[index], ...updates };
+    if (!newConfig.options) newConfig.options = {};
+    newConfig.options = { ...newConfig.options, ...updates };
     updateConfig(newConfig);
   }, [config, updateConfig]);
 
@@ -111,14 +110,14 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
         config={config}
         columns={columns}
         updateConfig={updateConfig}
-        updateSeriesConfig={updateSeriesConfig}
+        updateAntChartOptions={updateAntChartOptions}
         chartType={form.type}
       />
 
       <SeriesTab
         config={config}
         columns={columns}
-        updateSeriesConfig={updateSeriesConfig}
+        updateAntChartOptions={updateAntChartOptions}
         updateConfig={updateConfig}
         chartType={form.type}
       />

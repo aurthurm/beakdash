@@ -4,21 +4,6 @@ export interface DataPoint {
     [key: string]: string | number;
 }
 
-export interface SeriesConfig {
-    nameKey?: string;     // Column to use as series name
-    valueKey?: string;    // Column to use as series value
-    categoryKey?: string; // Column to use as category (x-axis)
-    stackKey?: string;    // Column to use for stacking
-    extraKeys?: string[]; // Additional data columns to include
-    color?: string;       // Custom color for series
-    visible?: boolean;    // Toggle series visibility
-    type?: IChart;       // Allow mixed chart types (e.g., line + bar)
-    axis?: 'primary' | 'secondary';  // Support dual axis
-    showLabel?: boolean;  // Toggle data labels
-    labelPosition?: 'inside' | 'outside' | 'top' | 'bottom';
-    [key: string]: any;  // Add index signature
-}
-
 export type AggregationMethod = 'sum' | 'avg' | 'max' | 'min' | 'count' | 'median' | 'distinct';
 
 export type SortingOrder = 'asc' | 'desc' | 'none';
@@ -108,16 +93,62 @@ export interface FilterGroup {
     filters: Filters[];
     operator: 'AND' | 'OR';
 }
-  
+
+export interface AntChartOptions {
+  xField?: string;
+  yField?: string;
+  angleField?: string;
+  seriesField?: string;
+  shapeField?: string;
+  colorField?: string;
+  stack?: {
+    groupBy: string[],
+    series: boolean,
+  } | boolean,
+  group?: boolean,
+}
+
+// Notes on fields required for each chart type:
+
+//           axis charts
+// bar       : xField, yField, colorField, stack (if stacked), normalize for 100% bar
+// column    : xField, yField, colorField, stack, normalize for 100% column, group
+// line      : xField, yField, colorField
+// area      : xField, yField, colorField, shapeField, stack, normalise
+// dual-axes : xField, children [{ yField, colorField }]
+
+// pie       : angleField, colorField, radius 
+
+export interface AntAsthetics {
+  colorField: string,
+  label: {
+    text: string,
+    position: 'outside' | 'inside' | 'top' | 'bottom',
+    style: {
+      fontWeight: 'bold',
+    },
+  },
+  style: {
+    lineWidth: number,
+  },
+  normalize: boolean,
+  sort: {
+    reverse: boolean,
+    by: string,
+  },
+  percent: boolean,
+  radius: number,
+  innerRadius: number,
+}
+
 export interface TransformConfig {
-    series?: SeriesConfig[];
-    rotateLabels?: number;
+    options?: AntChartOptions;
     aggregation?: Aggregation;
     sorting?: Sorting;
     formatting?: Formatting;
     filters?: Filters[];
 }
-  
+
 export interface TransformConf extends TransformConfig {
   type: IChart
 }

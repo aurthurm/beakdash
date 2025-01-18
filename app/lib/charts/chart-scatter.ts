@@ -1,22 +1,12 @@
-import { DataPoint, TransformConf } from "@/app/types/data";
-import type { EChartsOption } from 'echarts';
+import { DataPoint, TransformConf, AntChartOptions } from "@/app/types/data";
 
 /**
- * Transforms data for scatter plots EChartsOption
+ * Transforms data for scatter plots AntChartOptions
  */
-export function transformToScatterChart(data: DataPoint[], config: TransformConf): EChartsOption {
-    const seriesConfig = config.series?.[0] ?? {
-      nameKey: Object.keys(data[0])[0],
-      valueKey: Object.keys(data[0])[1]
-    };
-
+export function transformToScatterChart(data: DataPoint[], config: TransformConf): AntChartOptions {
     return {
-      series: [{
-        type: 'scatter',
-        data: data.map(item => [
-          Number(item[seriesConfig.nameKey!]),
-          Number(item[seriesConfig.valueKey!])
-        ])
-      }]
-    };
-}
+      xField: config.options?.xField,
+      yField: config.options?.yField,
+      colorField: config.options?.colorField,
+    } as AntChartOptions;
+  }

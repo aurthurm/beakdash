@@ -1,5 +1,5 @@
 import { IWidget } from "@/app/lib/drizzle/schemas";
-import { TransformConfig, SeriesConfig } from "@/app/types/data";
+import { TransformConfig, AntChartOptions } from "@/app/types/data";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 
 
@@ -16,10 +16,10 @@ interface ChartConfigPanelProps {
 export const BarGroupingConfig: React.FC<{
   config: TransformConfig;
   columns: ChartConfigPanelProps['columns'];
-  updateSeriesConfig: (index: number, updates: Partial<SeriesConfig>) => void;
-}> = ({ config, columns, updateSeriesConfig }) => {
-  const barMode = config.series?.[0]?.stackKey ? "stacked" : 
-                 config.series?.[0]?.nameKey ? "grouped" : "normal";
+  updateAntChartOptions: (updates: Partial<AntChartOptions>) => void;
+}> = ({ config, columns, updateAntChartOptions }) => {
+  const barMode = config.options?.stack ? "stacked" : 
+                 config.options?.group ? "grouped" : "normal";
 
   return (
       <div className="space-y-4">
@@ -29,22 +29,22 @@ export const BarGroupingConfig: React.FC<{
                   value={barMode}
                   onValueChange={(value) => {
                       if (value === "normal") {
-                          // Remove both stackKey and nameKey for normal bars
-                          updateSeriesConfig(0, { 
-                              stackKey: undefined,
-                              nameKey: undefined 
+                          // Remove both stackKey and yField for normal bars
+                          updateAntChartOptions({ 
+                            //   stackKey: undefined,
+                              yField: undefined 
                           });
                       } else if (value === "grouped") {
-                          // For grouped bars, set nameKey but ensure stackKey is undefined
-                          updateSeriesConfig(0, {
-                              stackKey: undefined,
-                              nameKey: columns.all[0] // or let user select the grouping field
+                          // For grouped bars, set yField but ensure stackKey is undefined
+                          updateAntChartOptions({
+                            //   stackKey: undefined,
+                              yField: columns.all[0] // or let user select the grouping field
                           });
                       } else if (value === "stacked") {
                           // For stacked, set stackKey (could use same field as grouping)
-                          updateSeriesConfig(0, { 
-                              nameKey: undefined,
-                              stackKey: columns.all[0] 
+                          updateAntChartOptions({ 
+                              yField: undefined,
+                            //   stackKey: columns.all[0] 
                           });
                       }
                   }}
@@ -60,6 +60,7 @@ export const BarGroupingConfig: React.FC<{
               </Select>
           </div>
 
+
           {/* Additional field selector for grouped/stacked field */}
           {barMode !== "normal" && (
               <div className="space-y-2">
@@ -67,16 +68,16 @@ export const BarGroupingConfig: React.FC<{
                       {barMode === "grouped" ? "Group By Field" : "Stack By Field"}
                   </label>
                   <Select
-                      value={barMode === "grouped" ? 
-                          config.series?.[0]?.nameKey : 
-                          config.series?.[0]?.stackKey}
-                      onValueChange={(value) => {
-                          if (barMode === "grouped") {
-                              updateSeriesConfig(0, { nameKey: value });
-                          } else {
-                              updateSeriesConfig(0, { stackKey: value });
-                          }
-                      }}
+                    //   value={barMode === "grouped" ? 
+                    //       config.options.yField : 
+                    //       config.options.stackKey}
+                    //   onValueChange={(value) => {
+                    //       if (barMode === "grouped") {
+                    //           updateAntChartOptions(0, { yField: value });
+                    //       } else {
+                    //           updateAntChartOptions(0, { stackKey: value });
+                    //       }
+                    //   }}
                   >
                       <SelectTrigger>
                           <SelectValue placeholder={`Select ${barMode === "grouped" ? "Group" : "Stack"} Field`} />

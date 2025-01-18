@@ -1,17 +1,22 @@
-import { DataPoint, TransformConf } from "@/app/types/data";
-import type { EChartsOption } from 'echarts';
+import { AntChartOptions, DataPoint, TransformConf } from "@/app/types/data";
 import { sort } from "./sorting";
 import { aggregate } from "./aggregation";
 import { applyFilters } from "./filter";
 import { transformToPieChart } from "./chart-pie";
-import { transformToAxisChart } from "./chart-axis";
+import { transformToLineChart } from "./chart-line";
+import { transformToBarChart } from "./chart-bar";
+import { transformToColumnChart } from "./chart-column";
+import { transformToScatterChart } from "./chart-scatter";
 
 
 export class ChartDataTransformer {
   // Cache for memoized results
-  private static cache = new Map<string, EChartsOption>();
+  private static cache = new Map<string, AntChartOptions>();
 
-  static transform(data: DataPoint[], config: TransformConf): EChartsOption | null {
+  static transform(data: DataPoint[], config: TransformConf): {
+    options: AntChartOptions;
+    data: DataPoint[];
+  } | null {
       // Input validation
       if (!data?.length || !config) {
           return null;
@@ -20,7 +25,10 @@ export class ChartDataTransformer {
       const cacheKey = this.generateCacheKey(data, config);
       const cachedResult = this.cache.get(cacheKey);
       if (cachedResult) {
-          return cachedResult;
+          return {
+              options: cachedResult,
+              data
+          };
       }
 
       const processedData = this.preProcessData(data, config);
@@ -28,7 +36,10 @@ export class ChartDataTransformer {
       
       // Cache and return
       this.cache.set(cacheKey, result);
-      return result;
+      return {
+          options: result,
+          data: processedData
+      };
   }
 
   // method for data preprocessing
@@ -64,22 +75,18 @@ export class ChartDataTransformer {
   /**
    * Transforms data based on specific chart type
    */
-  private static transformByType(data: DataPoint[], config: TransformConf): EChartsOption {
+  private static transformByType(data: DataPoint[], config: TransformConf): AntChartOptions {
     switch (config.type) {
       case 'pie':
         return transformToPieChart(data, config);
       case 'line':
+        return transformToLineChart(data, config);
       case 'bar':
-        return transformToAxisChart(data, config);
-      // case 'scatter':
-      //   return transformToScatterChart(data, config);
-      // case 'radar':
-      //   return transformToRadarChart(data);
-      // case 'heatmap':
-      //   return transformToHeatmap(data, config);
-      // case 'tree':
-      // case 'sunburst':
-      //   return transformToHierarchical(data, config);
+        return transformToBarChart(data, config);
+      case 'column':
+        return transformToColumnChart(data, config);
+      case 'scatter':
+        return transformToScatterChart(data, config);
       default:
         throw new Error(`Unsupported chart type: ${config.type}`);
     }

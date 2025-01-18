@@ -1,5 +1,5 @@
 import { IWidget } from "@/app/lib/drizzle/schemas";
-import { TransformConfig, SeriesConfig } from "@/app/types/data";
+import { TransformConfig, AntChartOptions } from "@/app/types/data";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 
 
@@ -11,20 +11,19 @@ interface ChartConfigPanelProps {
       nonNumeric: string[];
     };
     setForm: (update: IWidget) => void;
-  }
-
+}
 
 export const DataPieMapping: React.FC<{
     config: TransformConfig;
     columns: ChartConfigPanelProps['columns'];
-    updateSeriesConfig: (index: number, updates: Partial<SeriesConfig>) => void;
-  }> = ({ config, columns, updateSeriesConfig }) => (
+    updateAntChartOptions: (updates: Partial<AntChartOptions>) => void;
+  }> = ({ config, columns, updateAntChartOptions }) => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Labels Field</label>
+        <label className="text-sm font-medium">Labels Field ~ Color</label>
         <Select
-          value={config.series?.[0]?.nameKey}
-          onValueChange={(value) => updateSeriesConfig(0, { nameKey: value })}
+          value={config.options?.colorField}
+          onValueChange={(value) => updateAntChartOptions({ colorField: value })}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select labels field" />
@@ -38,10 +37,10 @@ export const DataPieMapping: React.FC<{
       </div>
   
       <div className="space-y-2">
-        <label className="text-sm font-medium">Values Field</label>
+        <label className="text-sm font-medium">Values Field ~ Angle</label>
         <Select
-          value={config.series?.[0]?.valueKey}
-          onValueChange={(value) => updateSeriesConfig(0, { valueKey: value })}
+          value={config.options?.angleField}
+          onValueChange={(value) => updateAntChartOptions({ angleField: value })}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select values field" />

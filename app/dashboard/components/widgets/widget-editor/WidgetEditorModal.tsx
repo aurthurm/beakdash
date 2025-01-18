@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ReactECharts, { EChartsOption } from 'echarts-for-react';
 import {
   LineChart, SaveAll, Table, X, Zap,
   Settings, ArrowLeft,
@@ -12,7 +11,7 @@ import { Editor } from '@monaco-editor/react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/ui/components/tabs';
 import { format, FormatOptionsWithLanguage } from 'sql-formatter';
 import DataExplorer from '@/app/dashboard/components/DataExplorer';
-import { DataPoint } from '@/app/types/data';
+import { AntChartOptions, DataPoint } from '@/app/types/data';
 import ChartConfigPanel from '@/app/dashboard/components/widgets/widget-editor/config-panel/ChartConfigPanel';
 import DatasetPanel from '@/app/dashboard/components/widgets/widget-editor/DatasetPanel';
 import { getChartOptions } from '@/app/lib/charts/options';
@@ -23,6 +22,7 @@ import { useDatasetStore } from '@/app/store/datasets';
 import { useAuth } from '@clerk/nextjs'
 import { useConnectionStore } from '@/app/store/connections';
 import { SQLConnectionConfig } from '@/app/types/datasource';
+import ChartWrapper from '../ChartWrapper';
 
 const SQL_FORMAT_OPTIONS = {
   language: 'postgresql', // or 'mysql', 'sqlite', etc.
@@ -321,7 +321,7 @@ const WidgetEditorModal: React.FC<WidgetModalProps> = ({
               <DataExplorer data={data ?? []}  />
             </TabsContent>
 
-              <ChartTabContent setActivePanel={setActivePanel} eChartOptions={getEChartOptions()} />
+              <ChartTabContent setActivePanel={setActivePanel} eChartOptions={getEChartOptions()} form={form} />
             </Tabs>
           </div>
         </div>
@@ -353,11 +353,12 @@ export default WidgetEditorModal;
 
 interface ChartTabContentProps {
   setActivePanel: (panel: 'connection' | 'chart') => void;
-  eChartOptions: EChartsOption;
+  eChartOptions: AntChartOptions;
+  form: IWidget;
 }
-const ChartTabContent: React.FC<ChartTabContentProps> = ({ setActivePanel, eChartOptions }) => {
+const ChartTabContent: React.FC<ChartTabContentProps> = ({ setActivePanel, eChartOptions, form }) => {
   const [isReady, setIsReady] = useState(false);
-  const [options, setOptions] = useState<EChartsOption>({});
+  const [options, setOptions] = useState<AntChartOptions>({});
 
   useEffect(() => {
     // Wait for next tick to ensure DOM is ready
@@ -382,16 +383,14 @@ const ChartTabContent: React.FC<ChartTabContentProps> = ({ setActivePanel, eChar
           <Settings size={16} className="mr-2" />
           Configure Chart
         </button>
-        {isReady && (
-          <ReactECharts
-            option={options}
-            opts={{ renderer: 'svg' }}
+        {isReady && form?.type && (
+          <ChartWrapper
+            type={form.type}
+            config={options}
             style={{
               minHeight: '300px',
               width: '70%'
             }}
-            notMerge={true}
-            lazyUpdate={true}
           />
         )}
       </div>

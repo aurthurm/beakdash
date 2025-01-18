@@ -18,24 +18,37 @@ const filterOperationsSchema = z.enum(['equals', 'contains', 'gt', 'lt', 'betwee
   'Filter operations: equals (exact match), contains (partial match), gt (greater than), lt (less than), between (range)'
 );
 
-// Series Configuration
-const seriesConfigSchema = z.object({
-  nameKey: z.string().nullish().describe(
-    'Column to use as the series name in the visualization'
-  ),
-  valueKey: z.string().nullish().describe(
-    'Column to use as the series value (y-axis) in the visualization'
-  ),
-  categoryKey: z.string().nullish().describe(
-    'Column to use as the category (x-axis) in the visualization'
-  ),
-  stackKey: z.string().nullish().describe(
-    'Column to use for stacking multiple series in stacked charts'
-  ),
-  extraKeys: z.array(z.string()).nullish().describe(
-    'Additional data columns to include in the visualization for tooltips or other features'
-  ),
-}).describe('Configuration for how data series should be mapped to visual elements');
+// Ant Design Charts Configuration
+const antChartConfigSchema = z.object({
+  xField: z.string().optional()
+    .describe("The key of the data field that corresponds to the x-axis."),
+  yField: z.string().optional()
+    .describe("The key of the data field that correspond to the y-axis."),
+  angleField: z.string().optional()
+    .describe("The key of the data field used to calculate angles, typically for pie or circular charts."),
+  seriesField: z.string().optional()
+    .describe("The key of the data field that defines how the data is grouped into series."),
+  shapeField: z.string().optional()
+    .describe("The key of the data field used to determine the shape of chart elements, if applicable."),
+  stack: z.union([
+      z.object({
+        groupBy: z
+          .array(z.string())
+          .describe("An array of data field keys used for grouping in stacked charts."),
+        series: z
+          .boolean()
+          .describe("Indicates whether stacking is applied at the series level."),
+      }),
+      z.boolean().describe("Indicates whether stacking is enabled (true) or disabled (false)."),
+    ]).optional()
+    .describe(
+      "Configuration for stacking behavior in the chart. Can be a boolean or an object with detailed options."
+    ),
+  group: z
+    .boolean()
+    .describe("Indicates whether data is grouped or not."),
+}).describe('Ant Charts Design Configuration for how data series should be mapped to visual elements');
+
 
 // Aggregation Configuration
 const aggregationSchema = z.object({
@@ -94,8 +107,8 @@ const filterSchema = z.object({
 
 // Transform Configuration
 const transformConfigSchema = z.object({
-  series: z.array(seriesConfigSchema).nullish().describe(
-    'Array of series configurations defining how data maps to visual elements'
+  options: antChartConfigSchema.nullish().describe(
+    'Ant Design configurations defining how data maps to a chart type'
   ),
   rotateLabels: z.number().nullish().describe(
     'Angle in degrees to rotate labels (useful for long category names)'
@@ -116,7 +129,7 @@ const transformConfigSchema = z.object({
 
 
 const transformConfigSchemaSQL = z.object({
-  series: z.array(seriesConfigSchema).nullish().describe(
+  options: antChartConfigSchema.nullish().describe(
     'Array of series configurations defining how data maps to visual elements'
   ),
   rotateLabels: z.number().nullish().describe(
@@ -146,7 +159,7 @@ const transformConfSchemaSQL = transformConfigSchemaSQL.extend({
 // Export schemas
 export const schemas = {
   dataPoint: dataPointSchema,
-  seriesConfig: seriesConfigSchema,
+  antChartConfig: antChartConfigSchema,
   aggregation: aggregationSchema,
   sorting: sortingSchema,
   formatting: formattingSchema,
@@ -158,7 +171,7 @@ export const schemas = {
 
 // Export type inference helpers
 export type IDataPoint = z.infer<typeof dataPointSchema>;
-export type ISeriesConfig = z.infer<typeof seriesConfigSchema>;
+export type IAntChartOptions = z.infer<typeof antChartConfigSchema>;
 export type IAggregation = z.infer<typeof aggregationSchema>;
 export type ISorting = z.infer<typeof sortingSchema>;
 export type IFormatting = z.infer<typeof formattingSchema>;
@@ -170,7 +183,7 @@ export type ITransformConf = z.infer<typeof transformConfSchema>;
 export const validateConfig = {
   transformConfig: (data: unknown): ITransformConfig => transformConfigSchema.parse(data),
   transformConf: (data: unknown): ITransformConf => transformConfSchema.parse(data),
-  seriesConfig: (data: unknown): ISeriesConfig => seriesConfigSchema.parse(data),
+  antChartConfig: (data: unknown): IAntChartOptions => antChartConfigSchema.parse(data),
   aggregation: (data: unknown): IAggregation => aggregationSchema.parse(data),
   sorting: (data: unknown): ISorting => sortingSchema.parse(data),
   formatting: (data: unknown): IFormatting => formattingSchema.parse(data),

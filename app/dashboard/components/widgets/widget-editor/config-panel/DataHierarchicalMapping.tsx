@@ -1,5 +1,5 @@
 import { IWidget } from "@/app/lib/drizzle/schemas";
-import { TransformConfig, SeriesConfig } from "@/app/types/data";
+import { TransformConfig, AntChartOptions } from "@/app/types/data";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 
 interface ChartConfigPanelProps {
@@ -16,15 +16,15 @@ interface ChartConfigPanelProps {
 export const DataHierarchicalMapping: React.FC<{
     config: TransformConfig;
     columns: ChartConfigPanelProps['columns'];
-    updateSeriesConfig: (index: number, updates: Partial<SeriesConfig>) => void;
-  }> = ({ config, columns, updateSeriesConfig }) => (
+    updateAntChartOptions: (updates: Partial<AntChartOptions>) => void;
+  }> = ({ config, columns, updateAntChartOptions }) => (
     <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">ID Field</label>
         <Select
-          value={config.series?.[0]?.nameKey}
+          value={config.options?.yField}
           onValueChange={(value) => {
-            updateSeriesConfig(0, { nameKey: value });
+            updateAntChartOptions({ yField: value });
           }}
         >
           <SelectTrigger>
@@ -41,9 +41,9 @@ export const DataHierarchicalMapping: React.FC<{
       <div className="space-y-2">
         <label className="text-sm font-medium">Parent ID Field</label>
         <Select
-          value={config.series?.[0]?.categoryKey}
+          value={config.options?.xField}
           onValueChange={(value) => {
-            updateSeriesConfig(0, { categoryKey: value });
+            updateAntChartOptions({ xField: value });
           }}
         >
           <SelectTrigger>
@@ -60,9 +60,9 @@ export const DataHierarchicalMapping: React.FC<{
       <div className="space-y-2">
         <label className="text-sm font-medium">Value Field</label>
         <Select
-          value={config.series?.[0]?.valueKey}
+          value={config.options?.yField}
           onValueChange={(value) => {
-            updateSeriesConfig(0, { valueKey: value });
+            updateAntChartOptions({ yField: value });
           }}
         >
           <SelectTrigger>

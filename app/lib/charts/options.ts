@@ -1,4 +1,4 @@
-import { DataPoint } from "@/app/types/data";
+import { DataPoint, TransformConf } from "@/app/types/data";
 import { ChartDataTransformer } from "./transformer";
 import { IWidget } from "../drizzle/schemas";
 import { cloneDeep } from "lodash";
@@ -18,24 +18,16 @@ export function getChartOptions(widget: IWidget, data: DataPoint[]): Record<stri
   // Transform data according to widget configuration
   const transformerConfig = {
     type: widget.type,
-    ...widget.transformConfig
-  };
+    ...widget.transformConfig,
+  } as TransformConf;
+  data = handleNumbers(data);
   const transformedData = ChartDataTransformer.transform(data, transformerConfig);
-
-  // Define chart-specific options
-  const chartSpecificOptions = {
-    tooltip: {
-      trigger: widget.type === 'pie' ? 'item' : 'axis'
-    }
-  };
 
   // Merge all options with proper precedence
   const finalOptions = deepMerge(
-    {},
     baseOptions,
     commonOptions,
-    chartSpecificOptions,
-    transformedData
+    transformedData?.options,
   );
 
   // Log final configuration for debugging
@@ -43,6 +35,42 @@ export function getChartOptions(widget: IWidget, data: DataPoint[]): Record<stri
     console.log('Final Chart Options:', finalOptions);
   }
 
-  return finalOptions;
+  return {
+    data: transformedData?.data || data,
+    ...finalOptions
+  };
 }
 
+
+const handleNumbers = (data: DataPoint[]) => {
+  if (!data.length) return [];
+
+  // Get all unique keys from the data
+  const allKeys = Array.from(new Set(data.flatMap(Object.keys)));
+  
+  // For each key, check if all values in its series can be converted to numbers
+  const numericFields = allKeys.filter(key => {
+    return data.every(item => {
+      const value = item[key];
+      if (value === undefined || value === null || value === '') return false;
+      if (typeof value === 'number') return true;
+      if (typeof value !== 'string') return false;
+      
+      // Try to convert to number and check if it's valid
+      const num = Number(value);
+      return !isNaN(num) && isFinite(num);
+    });
+  });
+
+  // Convert the identified numeric fields
+  return data.map(item => {
+    const processedItem: DataPoint = { ...item };
+    numericFields.forEach(field => {
+      const value = item[field];
+      if (typeof value === 'string') {
+        processedItem[field] = Number(value);
+      }
+    });
+    return processedItem;
+  });
+};

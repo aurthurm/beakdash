@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import ReactECharts, { EChartsOption } from 'echarts-for-react';
 import { Settings, Grip, Trash2 } from 'lucide-react';
 import { useDataSet } from '@/app/lib/hooks/useDataSet';
 import AICopilotButton from '@/app/dashboard/components/AICopilot/AICopilotButton';
@@ -10,6 +9,7 @@ import { WidgetSkeleton } from '@/app/dashboard/components/widgets/states/Widget
 import { getChartOptions } from '@/app/lib/charts/options';
 import { useAuth } from '@clerk/nextjs';
 import { IVisual, IWidget } from '@/app/lib/drizzle/schemas';
+import ChartWrapper from './ChartWrapper';
 
 interface WidgetProps {
   widget: IWidget;
@@ -20,15 +20,14 @@ interface WidgetProps {
 const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete }) => {
   const { userId } = useAuth()
   const { data, loading, error } = useDataSet(widget); 
-  const [echartOption, setEchartOption] = useState<EChartsOption>(null);
+  const [chartOptions, setEchartOptions] = useState<any>(null);
 
   const isChart = (widget.type as IVisual) !== 'count';
 
   const getEChartOption = useCallback(() => {
     const chartOpts = getChartOptions(widget, data);
-    setEchartOption(chartOpts);
+    setEchartOptions(chartOpts);
   },[data, widget])
-
   
   useEffect(() => {
     getEChartOption();
@@ -87,12 +86,11 @@ const WidgetVisual: React.FC<WidgetProps> = ({ widget, onEdit, onDelete }) => {
       </div>
       <hr />
       <div className='p-4 flex-1'>
-        {isChart && echartOption ? (
-          <ReactECharts
-            option={echartOption}
-            style={{ height: 'calc(100% - 0rem)' }}
-            notMerge={true}
-            lazyUpdate={true}
+        {isChart && chartOptions ? (
+          <ChartWrapper
+            type={widget.type}
+            config={chartOptions}
+            layout={widget.layout}
           />
         ) : (
           <div className="mt-4">

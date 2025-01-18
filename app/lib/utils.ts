@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { IWidget } from "./drizzle/schemas";
+import { IChart, IWidget } from "./drizzle/schemas";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -40,7 +40,7 @@ export const newWidgetPosition = (widgets: IWidget[], type: IChart) => {
   return {
     x: newX,
     y: newY,
-    w: type !== 'count' ? 4 : 2,
-    h: type !== 'count' ? 3 : 2,
+    w: type as any !== 'count' ? 4 : 2,
+    h: type as any !== 'count' ? 3 : 2,
   };
 };

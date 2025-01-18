@@ -9,7 +9,48 @@ export const ChartTypeTab: React.FC<{
     setForm: (form: IWidget) => void;
     config: TransformConfig;
     updateConfig: (config: Partial<TransformConfig>) => void;
-  }> = ({ form, setForm }) => (
+  }> = ({ form, setForm }) => {
+
+    const onChangeChartType = (value: string) => {
+      const transformConfig = {
+        ...form.transformConfig,
+        options: {
+          ...form.transformConfig?.options
+        }
+      };
+    
+      // Converting from any type to pie
+      if (value === 'pie') {
+        transformConfig.options = {
+          ...transformConfig.options,
+          // Preserve existing pie fields if they exist
+          colorField: transformConfig.options?.colorField || transformConfig.options?.xField,
+          angleField: transformConfig.options?.angleField || transformConfig.options?.yField,
+        }
+        // Clean up non-pie fields
+        delete transformConfig.options?.xField;
+        delete transformConfig.options?.yField;
+      }
+      // Converting from pie to other charts (line, bar, column)
+      else if (['line', 'bar', 'column', 'scatter'].includes(value)) {
+        transformConfig.options = {
+          ...transformConfig.options,
+          // Check if we're converting from pie chart
+          xField: form.type === 'pie' ? transformConfig.options?.colorField : transformConfig.options?.xField,
+          yField: form.type === 'pie' ? transformConfig.options?.angleField : transformConfig.options?.yField,
+        }
+        // Clean up pie fields
+        delete transformConfig.options?.angleField;
+      }
+    
+      setForm({
+        ...form,
+        type: value as IChart,
+        transformConfig
+      });
+    };
+
+    return (
     <TabsContent value="chart">
       <Card className="shadow-sm rounded-sm max-h-[650px] overflow-y-scroll">
         <CardContent className="pt-6">
@@ -18,7 +59,7 @@ export const ChartTypeTab: React.FC<{
               <label className="text-sm font-medium">Chart Type</label>
               <Select
                 value={form.type}
-                onValueChange={(value) => setForm({ ...form, 'type': value as IChart })}
+                onValueChange={(value) => onChangeChartType(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select chart type" />
@@ -35,3 +76,4 @@ export const ChartTypeTab: React.FC<{
       </Card>
     </TabsContent>
   );
+ };
