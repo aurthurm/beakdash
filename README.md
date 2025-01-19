@@ -1,6 +1,6 @@
 ## BeakDash
 
-![Beak Dash Dashboard Widgets](https://github.com/user-attachments/assets/ce1cda50-692f-42a9-a783-38ba8c0f07b1)
+![Beak Dash Dashboard Widgets](https://github.com/user-attachments/assets/6a96b2da-516e-4d3c-bdbd-5f4f283990bb)
 
 
 
