@@ -6,8 +6,8 @@ import { Switch } from "@/app/ui/components/switch";
 import { TabsContent } from "@/app/ui/components/tabs";
 import { DataAxisMapping } from "./DataAxisMapping";
 import { DataPieMapping } from "./DataPieMapping";
-import { BarGroupingConfig } from "./BarGroupingConfig";
 import { Separator } from "@/app/ui/components/separator";
+import { DataDualAxisMapping } from "./DataDualMapping";
 
 const AGG_METHODS: Array<{ value: AggregationMethod; label: string }> = [
     { value: 'sum', label: 'Sum' },
@@ -46,36 +46,11 @@ export const DataTab: React.FC<{
             {isAxisChart && (
               <>
                 <DataAxisMapping
+                  chartType={chartType}
                   config={config}
                   columns={columns}
                   updateAntChartOptions={updateAntChartOptions}
                 />
-                <Separator />
-                {chartType === 'bar' && (
-                    <>
-                      <BarGroupingConfig
-                          config={config}
-                          columns={columns}
-                          updateAntChartOptions={updateAntChartOptions}
-                      />
-                      <Separator />
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Rotate Labels</label>
-                        <input 
-                          aria-label='Rotate Labels'
-                          type="number" 
-                          className="w-full p-2 border rounded"
-                          min={-90}
-                          max={90}
-                          step={5}
-                          // value={config?.rotateLabels ?? 0}
-                          // onChange={(e) => updateConfig({
-                          //   rotateLabels: parseInt(e.target.value)
-                          // })}
-                        />
-                      </div>
-                    </>
-                )}
                 <Separator />
               </>
             )}
@@ -83,6 +58,17 @@ export const DataTab: React.FC<{
             {isPieChart && (
               <>
                 <DataPieMapping
+                  config={config}
+                  columns={columns}
+                  updateAntChartOptions={updateAntChartOptions}
+                />
+                <Separator />
+              </>
+            )}
+
+            {chartType === 'dual-axes' && (
+              <>
+                <DataDualAxisMapping
                   config={config}
                   columns={columns}
                   updateAntChartOptions={updateAntChartOptions}

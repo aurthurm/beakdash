@@ -19,34 +19,15 @@ export const DataScatterMapping: React.FC<{
   }> = ({ config, columns, updateAntChartOptions }) => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">X-Axis Values</label>
+        <label className="text-sm font-medium">Shape Field</label>
         <Select
-          value={config.options?.yField}
+          value={config.options?.shapeField}
           onValueChange={(value) => {
-            updateAntChartOptions({ yField: value });
+            updateAntChartOptions({ shapeField: value });
           }}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select X Values" />
-          </SelectTrigger>
-          <SelectContent>
-            {columns.numeric.map(col => (
-              <SelectItem key={col} value={col}>{col}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-  
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Y-Axis Values</label>
-        <Select
-          value={config.options?.yField}
-          onValueChange={(value) => {
-            updateAntChartOptions({ yField: value });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select Y Values" />
+            <SelectValue placeholder="Select field" />
           </SelectTrigger>
           <SelectContent>
             {columns.numeric.map(col => (

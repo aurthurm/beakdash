@@ -4,14 +4,18 @@ import { Card, CardContent } from "@/app/ui/components/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 import { TabsContent } from "@/app/ui/components/tabs";
 
+interface ChatTypeOptions {
+    type: IChart,
+    transformConfig: TransformConfig
+}
+
 export const ChartTypeTab: React.FC<{
     form: IWidget;
-    setForm: (form: IWidget) => void;
+    onChartTypeChange: (updates: ChatTypeOptions) => void;
     config: TransformConfig;
-    updateConfig: (config: Partial<TransformConfig>) => void;
-  }> = ({ form, setForm }) => {
+  }> = ({ form, onChartTypeChange }) => {
 
-    const onChangeChartType = (value: string) => {
+    const onChangeChartType = (value: IChart) => {
       const transformConfig = {
         ...form.transformConfig,
         options: {
@@ -32,7 +36,7 @@ export const ChartTypeTab: React.FC<{
         delete transformConfig.options?.yField;
       }
       // Converting from pie to other charts (line, bar, column)
-      else if (['line', 'bar', 'column', 'scatter'].includes(value)) {
+      if (['line', 'bar', 'column', 'scatter'].includes(value)) {
         transformConfig.options = {
           ...transformConfig.options,
           // Check if we're converting from pie chart
@@ -42,9 +46,41 @@ export const ChartTypeTab: React.FC<{
         // Clean up pie fields
         delete transformConfig.options?.angleField;
       }
-    
-      setForm({
-        ...form,
+      
+      if (value === 'dual-axes') {
+        const xField = form.type === 'pie' ? transformConfig.options?.angleField : transformConfig.options?.xField
+        transformConfig.options = {
+          ...transformConfig.options,
+          xField,
+        }
+        
+        if(!transformConfig.options.children) {
+          transformConfig.options.children = []
+        }
+
+        if(transformConfig.options.children.length < 2) {
+          transformConfig.options.children = [
+            {
+              type: 'interval',
+              yField: xField,
+              colorField: null,
+              style: {},
+              axis: {}
+            },
+            {
+              type: 'line',
+              yField: xField,
+              colorField: null,
+              style: { stroke: '#5AD8A6', lineWidth: 2 },
+              axis: { y: { position: 'right' } },
+            }
+          ]
+        }
+        delete transformConfig.options?.angleField;
+        delete transformConfig.options?.yField;
+      }
+
+      onChartTypeChange({
         type: value as IChart,
         transformConfig
       });
@@ -59,7 +95,7 @@ export const ChartTypeTab: React.FC<{
               <label className="text-sm font-medium">Chart Type</label>
               <Select
                 value={form.type}
-                onValueChange={(value) => onChangeChartType(value)}
+                onValueChange={(value: IChart) => onChangeChartType(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select chart type" />

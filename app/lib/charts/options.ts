@@ -32,7 +32,7 @@ export function getChartOptions(widget: IWidget, data: DataPoint[]): Record<stri
 
   // Log final configuration for debugging
   if (process.env.NODE_ENV === 'development') {
-    console.log('Final Chart Options:', finalOptions);
+    // console.log('Final Chart Options:', finalOptions);
   }
 
   return {

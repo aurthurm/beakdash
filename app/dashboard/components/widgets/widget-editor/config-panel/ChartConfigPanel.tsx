@@ -10,7 +10,7 @@ import {
   TransformConfig,
   AntChartOptions,
 } from '@/app/types/data';
-import { IWidget } from '@/app/lib/drizzle/schemas';
+import { IChart, IWidget } from '@/app/lib/drizzle/schemas';
 import { AdvancedTab } from './AdvancedTab';
 import { ChartTypeTab } from './ChartTypeTab';
 import { DataTab } from './DataTab';
@@ -18,31 +18,6 @@ import { FilteringTab } from './FilteringTab';
 import { FormattingTab } from './FormattingTab';
 import { SeriesTab } from './SeriesTab';
 
-
-const DEFAULT_CONFIG: TransformConfig = {
-  options: {},
-  aggregation: {
-    enabled: false,
-    method: undefined,
-    groupBy: [],
-    excludeNull: true
-  },
-  sorting: {
-    enabled: false,
-    key: '',
-    order: 'asc'
-  },
-  formatting: {
-    enabled: false,
-    numberFormat: {
-      style: 'decimal',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-      locale: 'en-US'
-    }
-  },
-  filters: []
-};
 
 interface ChartConfigPanelProps {
   form: IWidget;
@@ -55,7 +30,7 @@ interface ChartConfigPanelProps {
 }
 
 const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setForm }) => {
-  const [config, setConfig] = useState<TransformConfig>(form?.transformConfig || DEFAULT_CONFIG);
+  const [config, setConfig] = useState<TransformConfig>(form?.transformConfig);
 
   const updateConfig = useCallback((newConfig: Partial<TransformConfig>) => {
     const updatedConfig = { ...config, ...newConfig };
@@ -69,6 +44,12 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
     newConfig.options = { ...newConfig.options, ...updates };
     updateConfig(newConfig);
   }, [config, updateConfig]);
+
+  const onChartTypeChange = useCallback((updates: { type: IChart, transformConfig: TransformConfig }) => {
+    const updatedConfig = { ...config, ...updates.transformConfig };
+    setConfig(updatedConfig);
+    setForm({ ...form, type: updates.type, transformConfig: updatedConfig });
+  }, [ config, form, setForm ]);
 
   return (
     <Tabs defaultValue="chart">
@@ -101,9 +82,8 @@ const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({ form, columns, setF
 
       <ChartTypeTab
         form={form}
-        setForm={setForm}
         config={config}
-        updateConfig={updateConfig}
+        onChartTypeChange={onChartTypeChange}
       />
 
       <DataTab

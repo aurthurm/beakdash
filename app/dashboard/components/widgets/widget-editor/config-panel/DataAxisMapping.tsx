@@ -1,22 +1,19 @@
-import { IWidget } from "@/app/lib/drizzle/schemas";
+import { IChart } from "@/app/lib/drizzle/schemas";
 import { TransformConfig, AntChartOptions } from "@/app/types/data";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/app/ui/components/select";
 
-interface ChartConfigPanelProps {
-    form: IWidget;
-    columns: {
-      all: string[];
-      numeric: string[];
-      nonNumeric: string[];
-    };
-    setForm: (update: IWidget) => void;
-  }
+interface IColumns {
+  all: string[];
+  numeric: string[];
+  nonNumeric: string[];
+}
 
 export const DataAxisMapping: React.FC<{
+    chartType: IChart;
     config: TransformConfig;
-    columns: ChartConfigPanelProps['columns'];
+    columns: IColumns;
     updateAntChartOptions: (updates: Partial<AntChartOptions>) => void;
-  }> = ({ config, columns, updateAntChartOptions }) => (
+  }> = ({ config, columns, updateAntChartOptions, chartType }) => (
     <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">X-Axis Field</label>
@@ -28,7 +25,7 @@ export const DataAxisMapping: React.FC<{
             <SelectValue placeholder="Select X-Axis field" />
           </SelectTrigger>
           <SelectContent>
-            {columns.all.map(col => (
+            {(chartType === 'scatter' ? columns.numeric : columns.all).map(col => (
               <SelectItem key={col} value={col}>{col}</SelectItem>
             ))}
           </SelectContent>
@@ -68,5 +65,26 @@ export const DataAxisMapping: React.FC<{
           </SelectContent>
           </Select>
       </div>
+
+      {chartType === 'scatter' && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Shape Field</label>
+          <Select
+            value={config.options?.shapeField}
+            onValueChange={(value) => {
+              updateAntChartOptions({ shapeField: value });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select field" />
+            </SelectTrigger>
+            <SelectContent>
+              {columns.all.map(col => (
+                <SelectItem key={col} value={col}>{col}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );

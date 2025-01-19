@@ -7,6 +7,7 @@ import { transformToLineChart } from "./chart-line";
 import { transformToBarChart } from "./chart-bar";
 import { transformToColumnChart } from "./chart-column";
 import { transformToScatterChart } from "./chart-scatter";
+import { transformDualAxesChart } from "./chart-dual-axes";
 
 
 export class ChartDataTransformer {
@@ -87,6 +88,8 @@ export class ChartDataTransformer {
         return transformToColumnChart(data, config);
       case 'scatter':
         return transformToScatterChart(data, config);
+      case 'dual-axes':
+        return transformDualAxesChart(data, config);
       default:
         throw new Error(`Unsupported chart type: ${config.type}`);
     }

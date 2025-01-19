@@ -94,6 +94,19 @@ export interface FilterGroup {
     operator: 'AND' | 'OR';
 }
 
+export interface IDualSeries {
+  type: string;
+  yField: string;
+  colorField?: string;
+  style?: object;
+  axis?: object;
+}
+
+interface IStack {
+  groupBy: string[];
+  series: boolean;
+}
+
 export interface AntChartOptions {
   xField?: string;
   yField?: string;
@@ -101,11 +114,9 @@ export interface AntChartOptions {
   seriesField?: string;
   shapeField?: string;
   colorField?: string;
-  stack?: {
-    groupBy: string[],
-    series: boolean,
-  } | boolean,
+  stack?: IStack | boolean,
   group?: boolean,
+  children?: IDualSeries[],
 }
 
 // Notes on fields required for each chart type:

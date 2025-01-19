@@ -121,7 +121,7 @@ export type SelectPage = typeof pagesTable.$inferSelect;
 export type InsertPage = typeof pagesTable.$inferInsert;
 
 // 'count', 'line', 'pie', 'bar', 'heatmap', 'scatter'
-export const chartTypes = ['line', 'pie', 'bar', 'column', 'scatter'] as const;
+export const chartTypes = ['line', 'pie', 'bar', 'column', 'scatter', 'dual-axes'] as const;
 export const  visualTypes = ['count', ...chartTypes] as const;
 export type IChart = typeof chartTypes[number];
 export type IVisual = typeof visualTypes[number];

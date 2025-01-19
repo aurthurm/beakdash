@@ -25,57 +25,73 @@ interface ChartWrapperProps {
   config: any;
   style?: React.CSSProperties;
   layout?: {
-    w: number
-    h: number
-  }
+    w: number;
+    h: number;
+  };
 }
 
 const ChartWrapper: React.FC<ChartWrapperProps> = ({ type, config, style, layout }) => {
   const ChartComponent = ChartComponents[type];
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const { offsetWidth, offsetHeight } = containerRef.current;
-        setContainerSize({
-          width: offsetWidth,
-          height: offsetHeight,
-        });
-      }
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      // Get the parent element's dimensions
+      const parentElement = container.parentElement;
+      if (!parentElement) return;
+
+      // Calculate height based on layout or parent height
+      const height = layout?.h 
+        ? layout.h * 100 - 40 // Subtract padding/margins
+        : parentElement.clientHeight - 40;
+
+      setDimensions({
+        width: parentElement.clientWidth - 32, // Subtract horizontal padding
+        height: Math.max(height, 200), // Ensure minimum height
+      });
     };
 
-    // Initial size update
-    updateSize();
+    // Initial update
+    updateDimensions();
 
-    // Attach resize observer to handle parent size changes
-    const resizeObserver = new ResizeObserver(updateSize);
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
+    const resizeObserver = new ResizeObserver(() => {
+      window.requestAnimationFrame(updateDimensions);
+    });
+
+    // Observe both container and its parent
+    resizeObserver.observe(containerRef.current);
+    if (containerRef.current.parentElement) {
+      resizeObserver.observe(containerRef.current.parentElement);
     }
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
-   
-  console.log('layout', layout)
+  }, [layout]);
+
   return (
-    <div
+    <div 
       ref={containerRef}
+      className="w-full h-full"
       style={{
+        minHeight: '200px',
         ...style,
-        height: layout?.h ? `${(layout?.h ?? 1) * 80}px` || '100%' : style?.height, 
-        width: style?.width,
       }}
     >
-      {React.createElement(ChartComponent, {
-        ...config,
-        autoFit: true,
-        width: containerSize.width || undefined,
-        height: containerSize.height || undefined,
-      })}
+      {dimensions.width > 0 && dimensions.height > 0 && (
+        <ChartComponent
+          {...config}
+          width={dimensions.width}
+          height={dimensions.height}
+          autoFit={true}
+        />
+      )}
     </div>
   );
 };
