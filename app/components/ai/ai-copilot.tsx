@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
-import { MessageSquare, X, Minimize, Maximize, Sparkles } from "lucide-react";
+import { MessageSquare, X, Minimize, Maximize, Sparkles, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dataset, chartTypes } from "@/lib/db/schema";
@@ -58,6 +58,8 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
     },
   ]);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [interactedMessageIds, setInteractedMessageIds] = useState<Set<string>>(new Set());
+  const [interactedSuggestionMessageIds, setInteractedSuggestionMessageIds] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch available datasets
@@ -279,6 +281,102 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
     setPrompt("");
   };
 
+  const handleCreateChartClick = (message: Message) => {
+    if (!message.context?.datasetId || !message.context?.chartType) return;
+
+    const { datasetId, chartType } = message.context;
+
+    const userConfirmMessage: Message = {
+      id: `user-confirm-${Date.now()}`,
+      role: "user",
+      content: `Yes, please create the ${chartType} chart for dataset ${datasetId}.`,
+      timestamp: new Date(),
+      context: { datasetId, chartType }
+    };
+
+    const assistantResponseMessage: Message = {
+      id: `assistant-response-${Date.now()}`,
+      role: "assistant",
+      content: `Okay! I'll create a basic ${chartType} chart using dataset ${datasetId}. You can then customize it further using the widget editor. (Widget creation functionality is pending implementation).`,
+      timestamp: new Date(),
+      context: { datasetId, chartType }
+    };
+
+    setMessages(prev => [...prev, userConfirmMessage, assistantResponseMessage]);
+    setInteractedMessageIds(prev => new Set(prev).add(message.id));
+  };
+
+  const handleNoThanksClick = (message: Message) => {
+    const userDeclineMessage: Message = {
+      id: `user-decline-${Date.now()}`,
+      role: "user",
+      content: "No, thanks.",
+      timestamp: new Date(),
+    };
+
+    const assistantResponseMessage: Message = {
+      id: `assistant-acknowledge-${Date.now()}`,
+      role: "assistant",
+      content: "Alright. Let me know if you need anything else!",
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userDeclineMessage, assistantResponseMessage]);
+    setInteractedMessageIds(prev => new Set(prev).add(message.id));
+  };
+
+  const handleApplySuggestionClick = (message: Message, suggestionText: string) => {
+    const userMessage: Message = {
+      id: `user-apply-suggestion-${Date.now()}`,
+      role: "user",
+      content: `Yes, please apply this suggestion: "${suggestionText}"`,
+      timestamp: new Date(),
+      context: message.context,
+    };
+
+    const assistantMessage: Message = {
+      id: `assistant-apply-suggestion-${Date.now()}`,
+      role: "assistant",
+      content: `Okay! I'll apply the suggestion: "${suggestionText}". (Widget update functionality is pending implementation).`,
+      timestamp: new Date(),
+      context: message.context,
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
+    setInteractedSuggestionMessageIds(prev => new Set(prev).add(message.id));
+  };
+
+  const handleExplainChart = () => {
+    if (!widgetContext) {
+      // This case should ideally be prevented by disabling the button
+      const errorMessage: Message = {
+        id: `error-explain-${Date.now()}`,
+        role: "assistant",
+        content: "I need a specific widget to analyze before I can explain it. Please open the AI Copilot from a widget's menu.",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
+    const { type, name, config } = widgetContext;
+    const chartConfigString = JSON.stringify(config, null, 2); // Pretty print JSON
+    const constructedPrompt = `Please explain my current chart. It's a ${type} chart named '${name}' with the following configuration: \n\`\`\`json\n${chartConfigString}\n\`\`\`\nWhat does this chart represent and what insights might I gather from it?`;
+
+    const userMessage: Message = {
+      id: `user-explain-chart-${Date.now()}`,
+      role: "user",
+      content: constructedPrompt,
+      timestamp: new Date(),
+      context: {
+        datasetId: activeDatasetId, // or derive from widgetContext.config if available
+        chartType: type,
+      }
+    };
+    setMessages(prev => [...prev, userMessage]);
+    aiMutation.mutate(constructedPrompt);
+  };
+
   const handleGetChartRecommendation = () => {
     if (!selectedDatasetId) {
       // If no dataset is selected, show the dataset selector
@@ -463,6 +561,47 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
                       {message.context.chartType && ` | Chart: ${message.context.chartType}`}
                     </div>
                   )}
+                  {message.role === "assistant" &&
+                    message.content.includes("Would you like me to help you set up this chart?") &&
+                    !interactedMessageIds.has(message.id) && (
+                      <div className="mt-2 space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCreateChartClick(message)}
+                          disabled={!message.context?.datasetId || !message.context?.chartType}
+                        >
+                          Create this chart
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleNoThanksClick(message)}
+                        >
+                          No, thanks
+                        </Button>
+                      </div>
+                  )}
+                  {message.role === "assistant" &&
+                    message.content.includes("Would you like me to help you implement any of these improvements?") &&
+                    !interactedSuggestionMessageIds.has(message.id) && (
+                      <div className="mt-2 space-y-1">
+                        {message.content
+                          .split('\n')
+                          .filter(line => line.trim().startsWith('• '))
+                          .map((suggestion, index) => (
+                            <Button
+                              key={index}
+                              size="sm"
+                              variant="outline"
+                              className="w-full text-left justify-start h-auto whitespace-normal"
+                              onClick={() => handleApplySuggestionClick(message, suggestion.trim().substring(2))}
+                            >
+                              Apply: "{suggestion.trim().substring(2)}"
+                            </Button>
+                          ))}
+                      </div>
+                  )}
                 </div>
                 
                 {message.role === "user" && (
@@ -545,6 +684,19 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
                     <path d="M18 20V4"></path>
                     <path d="M6 20v-4"></path>
                   </svg>
+                </Button>
+
+                {/* Explain this chart button - only enabled when we have widget context */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  title="Explain this Chart"
+                  onClick={handleExplainChart}
+                  disabled={!widgetContext || aiMutation.isPending || chartRecommendationMutation.isPending || 
+                          chartImprovementsMutation.isPending || kpiSuggestionsMutation.isPending}
+                >
+                  <HelpCircle className="h-4 w-4" />
                 </Button>
               </div>
               

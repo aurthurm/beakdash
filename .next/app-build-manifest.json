@@ -57,50 +57,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/widgets/route.js"
     ],
-    "/dashboard/[id]/edit-widget/[widgetId]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/dashboard/[id]/edit-widget/[widgetId]/page.js"
-    ],
     "/api/datasets/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/datasets/route.js"
     ],
-    "/api/connections/[id]/schema-info/route": [
+    "/api/ai/chart-recommendation/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/connections/[id]/schema-info/route.js"
+      "static/chunks/app/api/ai/chart-recommendation/route.js"
     ],
-    "/api/connections/route": [
+    "/api/ai/kpi-suggestions/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/connections/route.js"
+      "static/chunks/app/api/ai/kpi-suggestions/route.js"
     ],
-    "/datasets/page": [
+    "/api/ai/copilot/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/datasets/page.js"
-    ],
-    "/datasets/create/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/datasets/create/page.js"
-    ],
-    "/datasets/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/datasets/[id]/page.js"
-    ],
-    "/api/datasets/[id]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/datasets/[id]/route.js"
-    ],
-    "/_not-found/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/api/ai/copilot/route.js"
     ]
   }
 }
