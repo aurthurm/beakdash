@@ -1,49 +1,26 @@
-import { sql } from "@/lib/db/postgres";
+import { executeQuery, QueryExecutionResult, QueryOptions } from './query-engine';
+import { BaseConnectionConfig } from './connection-pool';
 
-interface RunQueryOptions {
+export interface RunQueryOptions {
   query: string;
-  connectionConfig: any;
+  connectionConfig: BaseConnectionConfig;
   connectionType: string;
+  options?: QueryOptions;
 }
 
 /**
- * Run a query on a database connection
- * 
- * @param options Object containing query, connection config, and connection type
+ * Run a query on a database connection safely using the unified Query Engine
+ *
+ * @param options Object containing query, connection config, connection type, and execution options
  * @returns Query results
  */
-export async function runQueryOnConnection(options: RunQueryOptions): Promise<any> {
-  const { query, connectionConfig, connectionType } = options;
-  const startTime = Date.now();
-  
-  try {
-    // For PostgreSQL connections, use our built-in PostgreSQL connection
-    if (connectionType.toLowerCase() === 'postgresql') {
-      try {
-        // Execute the query on the PostgreSQL instance
-        const result = await sql.unsafe(query);
-        
-        const executionTimeMs = Date.now() - startTime;
-        return {
-          data: result,
-          executionTimeMs,
-        };
-      } catch (error: any) {
-        throw new Error(`PostgreSQL Error: ${error.message}`);
-      }
-    } 
-    // For MySQL connections
-    else if (connectionType.toLowerCase() === 'mysql') {
-      // In a real app, we would connect to MySQL using the configuration
-      // For now, return a mock response
-      throw new Error('MySQL connections are not yet supported');
-    }
-    // For other connection types
-    else {
-      throw new Error(`Connection type ${connectionType} is not supported`);
-    }
-  } catch (error: any) {
-    console.error('Error running query:', error);
-    throw error;
-  }
+export async function runQueryOnConnection(options: RunQueryOptions): Promise<QueryExecutionResult> {
+  const { query, connectionConfig, connectionType, options: execOptions } = options;
+
+  return await executeQuery(
+    connectionType,
+    connectionConfig,
+    query,
+    execOptions || { readOnly: true, maxRows: 5000, timeoutMs: 15000 }
+  );
 }

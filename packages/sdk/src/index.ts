@@ -10,7 +10,9 @@ import {
   BeakDashConfig,
   Dashboard,
   Widget,
-  DashboardSchema
+  DashboardSchema,
+  QueryExecutionResult,
+  QueryExecutionSchema
 } from '@beakdash/shared';
 import {
   BeakDashError,
@@ -71,7 +73,7 @@ export class BeakDashSDK {
         case 429:
           throw new RateLimitError(error.message, error.details);
         case 500:
-        case 502:
+          case 502:
         case 503:
         case 504:
           throw new ServerError(error.message, error.details);
@@ -148,6 +150,22 @@ export class BeakDashSDK {
     });
   }
 
+  // Query and Data Connection methods
+  async executeQuery(connectionId: number, query: string, options?: Record<string, any>): Promise<QueryExecutionResult> {
+    const response = await this.request<ApiResponse<QueryExecutionResult>>('/connections/execute', {
+      method: 'POST',
+      body: JSON.stringify({ connectionId, query, options })
+    });
+    return ApiResponseSchema(QueryExecutionSchema).parse(response).data;
+  }
+
+  async testConnection(type: string, config: Record<string, any>): Promise<{ success: boolean; message?: string; latencyMs?: number }> {
+    return await this.request<{ success: boolean; message?: string; latencyMs?: number }>('/connections/test', {
+      method: 'POST',
+      body: JSON.stringify({ type, ...config })
+    });
+  }
+
   // Embed methods
   async createEmbedToken(config: EmbedConfig): Promise<EmbedToken> {
     // Validate embed config
@@ -177,4 +195,4 @@ export class BeakDashSDK {
     const url = this.getEmbedUrl(token, config);
     return generateEmbedHtml(url, config.height, config.width);
   }
-} 
+}

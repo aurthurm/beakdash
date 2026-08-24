@@ -1,26 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { connections } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSchemaInfo } from '@/lib/db/schema-info';
-import { SQLConnectionConfig } from '@/types';
-
-export interface ColumnInfo {
-  column: string;
-  type: string;
-}
-
-export interface TableInfo {
-  [tableName: string]: ColumnInfo[];
-}
-
-export interface SchemaInfo {
-  [schemaName: string]: TableInfo;
-}
-
-export type SQLDriver = 'postgresql' | 'mysql' | 'sqlite';
+import { BaseConnectionConfig } from '@/lib/db/connection-pool';
 
 export async function GET(
   request: NextRequest,
@@ -29,49 +14,57 @@ export async function GET(
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id, 10);
     const { id } = await params;
-    const connectionId = parseInt(id);
+    const connectionId = parseInt(id, 10);
+
+    if (isNaN(connectionId)) {
+      return NextResponse.json(
+        { error: 'Invalid connection ID' },
+        { status: 400 }
+      );
+    }
 
     // Get connection details
     const connection = await db.query.connections.findFirst({
-      where: eq(connections.id, connectionId)
+      where: and(eq(connections.id, connectionId), eq(connections.userId, userId)),
     });
 
     if (!connection) {
       return NextResponse.json(
-        { error: 'Connection not found' },
+        { error: 'Connection not found or unauthorized' },
         { status: 404 }
       );
     }
 
-    // Check if user has access to this connection
-    if (Number(connection.userId) !== Number(userId)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
+    const config = (connection.config as unknown as BaseConnectionConfig) || {};
+    const normalizedConfig: BaseConnectionConfig = {
+      ...config,
+      user: config.user || config.username,
+      type: config.type || connection.type,
+    };
 
-    const config = connection.config as unknown as any;
+    const forceRefresh = request.nextUrl.searchParams.get('refresh') === 'true';
 
-    // Get schema info based on connection type
-    const schemaInfo = await getSchemaInfo({...config, user: config.username} as SQLConnectionConfig);
+    // Get schema info with caching
+    const schemaInfo = await getSchemaInfo(normalizedConfig, forceRefresh);
 
-    return NextResponse.json(schemaInfo);
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      schemaInfo,
+    });
+  } catch (error: any) {
     console.error('Schema info error:', error);
     return NextResponse.json(
-      { error: 'Failed to get schema info' },
+      { success: false, error: error.message || 'Failed to get schema info' },
       { status: 500 }
     );
   }
 }
-

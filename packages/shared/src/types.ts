@@ -23,6 +23,25 @@ export interface Widget {
   data?: any;
 }
 
+// Connection & Query types
+export interface QueryExecutionResult<T = Record<string, any>> {
+  data: T[];
+  columns: { name: string; type: string; originalType?: string }[];
+  rowCount: number;
+  totalCount?: number;
+  truncated: boolean;
+  executionTimeMs: number;
+  dialect: string;
+}
+
+export interface ConnectionInfo {
+  id: number;
+  name: string;
+  type: string;
+  config: Record<string, any>;
+  isActive?: boolean;
+}
+
 // Embed types
 export interface EmbedConfig {
   dashboardId: string;
@@ -74,6 +93,20 @@ export const DashboardSchema = z.object({
   updatedAt: z.string()
 });
 
+export const QueryExecutionSchema = z.object({
+  data: z.array(z.record(z.any())),
+  columns: z.array(z.object({
+    name: z.string(),
+    type: z.string(),
+    originalType: z.string().optional(),
+  })),
+  rowCount: z.number(),
+  totalCount: z.number().optional(),
+  truncated: z.boolean(),
+  executionTimeMs: z.number(),
+  dialect: z.string(),
+});
+
 export const EmbedConfigSchema = z.object({
   dashboardId: z.string(),
   theme: z.enum(['light', 'dark', 'system']).optional(),
@@ -104,4 +137,4 @@ export const ApiErrorSchema = z.object({
   code: z.string(),
   message: z.string(),
   details: z.record(z.any()).optional()
-}); 
+});
