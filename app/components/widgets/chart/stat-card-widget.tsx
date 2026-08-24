@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus, ArrowUp, ArrowDown, DollarSign, Percent } from 'lucide-react';
-import { ChartConfig } from '@/lib/chart-utils';
+import { ChartConfig } from '@/types';
 
 interface StatCardWidgetProps {
   data: Record<string, any>[];

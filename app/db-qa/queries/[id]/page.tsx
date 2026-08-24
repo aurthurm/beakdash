@@ -8,13 +8,14 @@ export const metadata: Metadata = {
 };
 
 interface ViewQueryPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function ViewQueryPage({ params }: ViewQueryPageProps) {
-  const id = await params.id;
+  const { id } = await params;
+
   
   return (
     <AppLayout>

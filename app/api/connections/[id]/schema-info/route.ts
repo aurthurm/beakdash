@@ -24,7 +24,7 @@ export type SQLDriver = 'postgresql' | 'mysql' | 'sqlite';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user

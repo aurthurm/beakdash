@@ -165,9 +165,11 @@ export const xxx = [
   "histogram", "word-cloud"
 ] as const;
 export const chartTypes = [
-  "bar", "column", 'line', 'pie', 'area', "scatter", "dual-axes", "word-cloud","histogram"
+  "bar", "column", 'line', 'pie', 'area', "scatter", "dual-axes", "counter", "stat-card", "box-plot", "word-cloud", "histogram"
 ] as const;
 export const chartSchemas = z.enum(chartTypes);
+
+
 
 // Widgets schema
 // Define a forward reference for widgets table
@@ -271,7 +273,7 @@ type BaseWidgetConfig = {
   axis?: {
     x?: {
       position?: string;
-      title?: boolean;
+      title?: boolean | string;
       grid?: boolean;
       tick?: boolean;
       label?: boolean;
@@ -281,7 +283,7 @@ type BaseWidgetConfig = {
     };
     y?: {
       position?: string;
-      title?: boolean;
+      title?: boolean | string;
       grid?: boolean;
       tick?: boolean;
       label?: boolean;
@@ -290,6 +292,7 @@ type BaseWidgetConfig = {
       };
     };
   };
+  [key: string]: any;
 };
 
 export type WidgetConfig = BaseWidgetConfig;
@@ -432,7 +435,7 @@ export const widgets = pgTable("widgets", {
   config: jsonb("config").default({}).$type<WidgetConfig>(),
   customQuery: text("custom_query"),
   data: jsonb("data").default([]).$type<Record<string, any>[]>(),
-  position: jsonb("position").default({ x: 0, y: 0, w: 3, h: 2 }),
+  position: jsonb("position").default({ x: 0, y: 0, w: 3, h: 2 }).$type<{ x: number; y: number; w: number; h: number; minW?: number; minH?: number }>(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -441,7 +444,7 @@ export const widgets = pgTable("widgets", {
 export const dashboardWidgets = pgTable("dashboard_widgets", {
   dashboardId: integer("dashboard_id").notNull().references(() => dashboards.id),
   widgetId: integer("widget_id").notNull().references(() => widgets.id),
-  position: jsonb("position").default({}),
+  position: jsonb("position").default({}).$type<{ x?: number; y?: number; w?: number; h?: number; minW?: number; minH?: number }>(),
 }, (table) => {
   return {
     pk: primaryKey({ columns: [table.dashboardId, table.widgetId] }),

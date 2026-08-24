@@ -1,33 +1,21 @@
-import { BeakDashSDK } from '../index';
-import { Dashboard, Widget } from '../types';
-import axios from 'axios';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-vi.mock('axios');
-const mockedAxios = axios as vi.Mocked<typeof axios>;
+import { BeakDashSDK, AuthenticationError, NotFoundError } from '../index';
+import { Dashboard, Widget } from '@beakdash/shared';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('BeakDashSDK', () => {
   let sdk: BeakDashSDK;
   const mockConfig = {
     apiKey: 'test-api-key',
-    baseUrl: 'https://api.test.com/v1'
+    baseUrl: 'https://api.test.com/v1',
   };
 
   beforeEach(() => {
     sdk = new BeakDashSDK(mockConfig);
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
-  describe('constructor', () => {
-    it('should create axios instance with correct config', () => {
-      expect(mockedAxios.create).toHaveBeenCalledWith({
-        baseURL: mockConfig.baseUrl,
-        headers: {
-          'Authorization': `Bearer ${mockConfig.apiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
-    });
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('getDashboards', () => {
@@ -37,18 +25,27 @@ describe('BeakDashSDK', () => {
         name: 'Test Dashboard',
         widgets: [],
         createdAt: '2024-01-01',
-        updatedAt: '2024-01-01'
-      }
+        updatedAt: '2024-01-01',
+      },
     ];
 
     it('should return dashboards', async () => {
-      mockedAxios.create().get.mockResolvedValueOnce({
-        data: { data: mockDashboards }
-      });
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: mockDashboards }),
+      } as Response);
 
       const result = await sdk.getDashboards();
       expect(result).toEqual(mockDashboards);
-      expect(mockedAxios.create().get).toHaveBeenCalledWith('/dashboards');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.test.com/v1/dashboards',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-api-key',
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
     });
   });
 
@@ -58,41 +55,56 @@ describe('BeakDashSDK', () => {
       name: 'Test Dashboard',
       widgets: [],
       createdAt: '2024-01-01',
-      updatedAt: '2024-01-01'
+      updatedAt: '2024-01-01',
     };
 
     it('should return a dashboard', async () => {
-      mockedAxios.create().get.mockResolvedValueOnce({
-        data: { data: mockDashboard }
-      });
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: mockDashboard }),
+      } as Response);
 
       const result = await sdk.getDashboard('1');
       expect(result).toEqual(mockDashboard);
-      expect(mockedAxios.create().get).toHaveBeenCalledWith('/dashboards/1');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.test.com/v1/dashboards/1',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-api-key',
+          }),
+        })
+      );
     });
   });
 
   describe('createDashboard', () => {
     const mockDashboardData = {
       name: 'New Dashboard',
-      widgets: []
+      widgets: [],
     };
 
     const mockCreatedDashboard: Dashboard = {
       id: '1',
       ...mockDashboardData,
       createdAt: '2024-01-01',
-      updatedAt: '2024-01-01'
+      updatedAt: '2024-01-01',
     };
 
     it('should create a dashboard', async () => {
-      mockedAxios.create().post.mockResolvedValueOnce({
-        data: { data: mockCreatedDashboard }
-      });
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: mockCreatedDashboard }),
+      } as Response);
 
       const result = await sdk.createDashboard(mockDashboardData);
       expect(result).toEqual(mockCreatedDashboard);
-      expect(mockedAxios.create().post).toHaveBeenCalledWith('/dashboards', mockDashboardData);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.test.com/v1/dashboards',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify(mockDashboardData),
+        })
+      );
     });
   });
 
@@ -102,48 +114,59 @@ describe('BeakDashSDK', () => {
         id: '1',
         type: 'chart',
         title: 'Test Widget',
-        config: {}
-      }
+        config: {},
+      },
     ];
 
     it('should return widgets', async () => {
-      mockedAxios.create().get.mockResolvedValueOnce({
-        data: { data: mockWidgets }
-      });
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: mockWidgets }),
+      } as Response);
 
       const result = await sdk.getWidgets('1');
       expect(result).toEqual(mockWidgets);
-      expect(mockedAxios.create().get).toHaveBeenCalledWith('/dashboards/1/widgets');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.test.com/v1/dashboards/1/widgets',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-api-key',
+          }),
+        })
+      );
     });
   });
 
   describe('error handling', () => {
     it('should handle authentication error', async () => {
-      mockedAxios.create().get.mockRejectedValueOnce({
-        response: {
-          status: 401,
-          data: {
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          error: {
             code: 'AUTH_ERROR',
-            message: 'Invalid API key'
-          }
-        }
-      });
+            message: 'Invalid API key',
+          },
+        }),
+      } as Response);
 
-      await expect(sdk.getDashboards()).rejects.toThrow('Invalid API key');
+      await expect(sdk.getDashboards()).rejects.toThrow(AuthenticationError);
     });
 
     it('should handle not found error', async () => {
-      mockedAxios.create().get.mockRejectedValueOnce({
-        response: {
-          status: 404,
-          data: {
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({
+          error: {
             code: 'NOT_FOUND',
-            message: 'Dashboard not found'
-          }
-        }
-      });
+            message: 'Dashboard not found',
+          },
+        }),
+      } as Response);
 
-      await expect(sdk.getDashboard('999')).rejects.toThrow('Dashboard not found');
+      await expect(sdk.getDashboard('999')).rejects.toThrow(NotFoundError);
     });
   });
-}); 
+});
+ 

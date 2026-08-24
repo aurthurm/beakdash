@@ -33,7 +33,7 @@ export function GridLayoutComponent({ widgets, dashboardId }: GridLayoutProps) {
     const [layouts, setLayouts] = useState(() => {
       const layoutItems = widgets.map(widget => {
         // Ensure position exists
-        const position = widget.position || {};
+        const position = (widget.position as { x?: number; y?: number; w?: number; h?: number } | null) || {};
         
         // Create a layout item with the saved position or defaults
         const item = {

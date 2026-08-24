@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus, DollarSign, Percent } from 'lucide-react';
-import { ChartConfig } from '@/lib/chart-utils';
+import { ChartConfig } from '@/types';
 
 interface CounterWidgetProps {
   data: Record<string, any>[];

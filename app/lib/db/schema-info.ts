@@ -1,25 +1,22 @@
 import { ClientConfig, Client as PgClient } from 'pg';
 import * as mysql from 'mysql2/promise';
 import * as sqlite3 from 'sqlite3';
+import { promisify } from 'util';
 import { SQLConnectionConfig } from '@/types';
 
-export interface SchemaInfo {
-  schemas: string[];
-  tables: {
-    [schema: string]: string[];
-  };
-  columns: {
-    [schema: string]: {
-      [table: string]: ColumnInfo[];
-    };
-  };
+export interface ColumnInfo {
+  column: string;
+  type: string;
+  nullable?: boolean;
+  isPrimaryKey?: boolean;
 }
 
-export interface ColumnInfo {
-  name: string;
-  type: string;
-  nullable: boolean;
-  isPrimaryKey: boolean;
+export interface TableInfo {
+  [tableName: string]: ColumnInfo[];
+}
+
+export interface SchemaInfo {
+  [schemaName: string]: TableInfo;
 }
 
 interface SQLiteTable {
@@ -46,6 +43,7 @@ export async function getSchemaInfo(config: SQLConnectionConfig) {
       throw new Error('Unsupported database type');
   }
 }
+
 
 async function getPgSchema(config: ClientConfig): Promise<SchemaInfo> {
   const client = new PgClient({

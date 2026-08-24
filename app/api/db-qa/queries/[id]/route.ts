@@ -6,21 +6,20 @@ import pg from 'pg';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // Parse query ID
-    const id = await params.id;
-    const queryId = parseInt(id);
+    const { id } = await params;
+    const queryId = parseInt(id, 10);
     
     if (isNaN(queryId)) {
       return NextResponse.json(
@@ -30,7 +29,7 @@ export async function GET(
     }
     
     // Get user ID from session
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id, 10);
     
     // Fetch query with additional info
     const result = await sql`
@@ -58,7 +57,7 @@ export async function GET(
     }
     
     // Format the response
-    const query = result[0];
+    const query = result[0] as Record<string, any>;
     
     // Add formatted connection and space data
     const formattedQuery = {
@@ -85,21 +84,20 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // Parse query ID
-    const id = await params.id;
-    const queryId = parseInt(id);
+    const { id } = await params;
+    const queryId = parseInt(id, 10);
     
     if (isNaN(queryId)) {
       return NextResponse.json(
@@ -109,7 +107,7 @@ export async function PUT(
     }
     
     // Get user ID from session
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id, 10);
     
     // Check if query exists and belongs to the user
     const queryCheck = await sql`
@@ -152,15 +150,15 @@ export async function PUT(
         );
       }
       
-      const connection = connectionResult[0];
-      const config = connection.config as Record<string, any>;
+      const connection = connectionResult[0] as Record<string, any>;
+      const config = (connection.config || {}) as Record<string, any>;
       
       // Create a connection to run the test query if it's a SQL connection
       if (connection.type === 'sql' || connection.type === 'postgresql') {
         try {
           const pool = new pg.Pool({
             host: config.hostname,
-            port: parseInt(config.port || '5432'),
+            port: parseInt(config.port || '5432', 10),
             database: config.database,
             user: config.username,
             password: config.password,

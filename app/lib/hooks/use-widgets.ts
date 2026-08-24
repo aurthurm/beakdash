@@ -8,7 +8,7 @@ import { Widget, InsertWidget, Dashboard } from "@/lib/db/schema";
  */
 export function useWidgets(dashboardId?: number) {
   const queryClient = useQueryClient();
-  const { addToast } = useToast();
+  const { toast } = useToast();
 
   // Fetch all widgets for a dashboard using the new API endpoint
   const widgetsQuery = useQuery({
@@ -60,16 +60,16 @@ export function useWidgets(dashboardId?: number) {
       }
       queryClient.invalidateQueries({ queryKey: ['/api/widgets'] });
       
-      addToast({
+      toast({
         title: "Widget created",
-        message: "Your widget has been successfully created.",
+        description: "Your widget has been successfully created.",
       });
     },
     onError: (error) => {
-      addToast({
+      toast({
         title: "Error",
-        message: `Failed to create widget: ${error.message}`,
-        type: "error",
+        description: `Failed to create widget: ${error.message}`,
+        variant: "destructive",
       });
     },
   });
@@ -89,16 +89,16 @@ export function useWidgets(dashboardId?: number) {
       queryClient.invalidateQueries({ queryKey: ['/api/widgets', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/widgets', variables.id, 'dashboards'] });
       
-      addToast({
+      toast({
         title: "Widget updated",
-        message: "Your widget has been successfully updated.",
+        description: "Your widget has been successfully updated.",
       });
     },
     onError: (error) => {
-      addToast({
+      toast({
         title: "Error",
-        message: `Failed to update widget: ${error.message}`,
-        type: "error",
+        description: `Failed to update widget: ${error.message}`,
+        variant: "destructive",
       });
     },
   });
@@ -115,16 +115,16 @@ export function useWidgets(dashboardId?: number) {
       }
       queryClient.invalidateQueries({ queryKey: ['/api/widgets'] });
       
-      addToast({
+      toast({
         title: "Widget deleted",
-        message: "Your widget has been successfully deleted.",
+        description: "Your widget has been successfully deleted.",
       });
     },
     onError: (error) => {
-      addToast({
+      toast({
         title: "Error",
-        message: `Failed to delete widget: ${error.message}`,
-        type: "error",
+        description: `Failed to delete widget: ${error.message}`,
+        variant: "destructive",
       });
     },
   });
@@ -148,16 +148,16 @@ export function useWidgets(dashboardId?: number) {
       queryClient.invalidateQueries({ queryKey: ['/api/dashboards', variables.dashboardId, 'widgets'] });
       queryClient.invalidateQueries({ queryKey: ['/api/widgets', variables.widgetId, 'dashboards'] });
       
-      addToast({
+      toast({
         title: "Widget added",
-        message: "Widget has been added to the dashboard.",
+        description: "Widget has been added to the dashboard.",
       });
     },
     onError: (error) => {
-      addToast({
+      toast({
         title: "Error",
-        message: `Failed to add widget to dashboard: ${error.message}`,
-        type: "error",
+        description: `Failed to add widget to dashboard: ${error.message}`,
+        variant: "destructive",
       });
     },
   });
@@ -178,16 +178,16 @@ export function useWidgets(dashboardId?: number) {
       queryClient.invalidateQueries({ queryKey: ['/api/dashboards', variables.dashboardId, 'widgets'] });
       queryClient.invalidateQueries({ queryKey: ['/api/widgets', variables.widgetId, 'dashboards'] });
       
-      addToast({
+      toast({
         title: "Widget removed",
-        message: "Widget has been removed from the dashboard.",
+        description: "Widget has been removed from the dashboard.",
       });
     },
     onError: (error) => {
-      addToast({
+      toast({
         title: "Error",
-        message: `Failed to remove widget from dashboard: ${error.message}`,
-        type: "error",
+        description: `Failed to remove widget from dashboard: ${error.message}`,
+        variant: "destructive",
       });
     },
   });

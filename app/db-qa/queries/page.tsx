@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { DbQaQueriesClient } from "./client-page";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function DbQaQueriesPage() {
   return (
     <AppLayout>
-      <DbQaQueriesClient />
+      <Suspense fallback={<div className="p-6">Loading quality checks...</div>}>
+        <DbQaQueriesClient />
+      </Suspense>
     </AppLayout>
   );
 }

@@ -11,11 +11,11 @@ export const metadata: Metadata = {
 export default async function CreateConnectionPage({ 
   searchParams,
 }: { 
-  searchParams: { type?: string } 
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // Get the type from URL params, using nullish coalescing to handle undefined
-  const params = await Promise.resolve(searchParams);
-  const defaultTab = params?.type || 'sql';
+  const params = await searchParams;
+  const defaultTab = (typeof params?.type === 'string' ? params.type : undefined) || 'sql';
+
   
   return (
     <AppLayout>

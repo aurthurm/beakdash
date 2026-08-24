@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { dashboards, spaces } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,17 +23,17 @@ export async function GET(request: NextRequest) {
     
     if (userId && spaceId) {
       allDashboards = await db.select().from(dashboards)
-        .where(eq(dashboards.userId, parseInt(userId)))
-        .where(eq(dashboards.spaceId, parseInt(spaceId)));
+        .where(and(eq(dashboards.userId, parseInt(userId, 10)), eq(dashboards.spaceId, parseInt(spaceId, 10))));
     } else if (userId) {
       allDashboards = await db.select().from(dashboards)
-        .where(eq(dashboards.userId, parseInt(userId)));
+        .where(eq(dashboards.userId, parseInt(userId, 10)));
     } else if (spaceId) {
       allDashboards = await db.select().from(dashboards)
-        .where(eq(dashboards.spaceId, parseInt(spaceId)));
+        .where(eq(dashboards.spaceId, parseInt(spaceId, 10)));
     } else {
       allDashboards = await db.select().from(dashboards);
     }
+
     
     return NextResponse.json(allDashboards);
   } catch (error) {

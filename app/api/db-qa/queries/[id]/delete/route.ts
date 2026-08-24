@@ -5,20 +5,20 @@ import { sql } from "@/lib/db/postgres";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
     
-    const id = await params.id;
-    const queryId = parseInt(id);
+    const { id } = await params;
+    const queryId = parseInt(id, 10);
     
     if (isNaN(queryId)) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function POST(
     }
     
     // Get user ID from session
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id, 10);
     
     // Check if query exists and belongs to the user
     const queryResult = await sql`
@@ -38,6 +38,7 @@ export async function POST(
       WHERE q.id = ${queryId}
       AND q.user_id = ${userId}
     `;
+
     
     if (queryResult.length === 0) {
       return NextResponse.json(

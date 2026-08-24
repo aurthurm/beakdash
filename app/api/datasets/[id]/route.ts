@@ -2,24 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { sql } from 'drizzle-orm';
+import { datasets } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
-    const datasetId = parseInt(params.id);
+    const userId = parseInt(session.user.id, 10);
+    const { id } = await params;
+    const datasetId = parseInt(id, 10);
     
     if (isNaN(datasetId)) {
       return NextResponse.json(
@@ -29,32 +31,18 @@ export async function GET(
     }
     
     // Get dataset
-    const datasetResult = await db.execute(
-      sql`SELECT * FROM datasets WHERE id = ${datasetId} AND user_id = ${userId}`
-    );
+    const dataset = await db.query.datasets.findFirst({
+      where: and(eq(datasets.id, datasetId), eq(datasets.userId, userId)),
+    });
     
-    if (!Array.isArray(datasetResult) || datasetResult.length === 0) {
+    if (!dataset) {
       return NextResponse.json(
         { error: 'Dataset not found' },
         { status: 404 }
       );
     }
     
-    // Get the dataset
-    const dataset = datasetResult[0];
-    
-    // Process the dataset to be serializable
-    const plainObject: Record<string, any> = {};
-    for (const key in dataset) {
-      let value = dataset[key];
-      // Convert dates to ISO strings
-      if (value instanceof Date) {
-        value = value.toISOString();
-      }
-      plainObject[key] = value;
-    }
-    
-    return NextResponse.json(plainObject);
+    return NextResponse.json(dataset);
   } catch (error) {
     console.error('Dataset fetch error:', error);
     
@@ -67,20 +55,21 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
-    const datasetId = parseInt(params.id);
+    const userId = parseInt(session.user.id, 10);
+    const { id } = await params;
+    const datasetId = parseInt(id, 10);
     
     if (isNaN(datasetId)) {
       return NextResponse.json(
@@ -89,22 +78,18 @@ export async function DELETE(
       );
     }
     
-    // Verify dataset exists and belongs to user
-    const datasetResult = await db.execute(
-      sql`SELECT id FROM datasets WHERE id = ${datasetId} AND user_id = ${userId}`
-    );
+    const existing = await db.query.datasets.findFirst({
+      where: and(eq(datasets.id, datasetId), eq(datasets.userId, userId)),
+    });
     
-    if (!Array.isArray(datasetResult) || datasetResult.length === 0) {
+    if (!existing) {
       return NextResponse.json(
         { error: 'Dataset not found or you do not have permission to delete it' },
         { status: 404 }
       );
     }
     
-    // Delete dataset
-    await db.execute(
-      sql`DELETE FROM datasets WHERE id = ${datasetId} AND user_id = ${userId}`
-    );
+    await db.delete(datasets).where(and(eq(datasets.id, datasetId), eq(datasets.userId, userId)));
     
     return NextResponse.json({
       success: true,
@@ -122,20 +107,21 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
-    const datasetId = parseInt(params.id);
+    const userId = parseInt(session.user.id, 10);
+    const { id } = await params;
+    const datasetId = parseInt(id, 10);
     
     if (isNaN(datasetId)) {
       return NextResponse.json(
@@ -147,92 +133,40 @@ export async function PATCH(
     // Get request body
     const body = await request.json();
     
-    // Verify dataset exists and belongs to user
-    const datasetResult = await db.execute(
-      sql`SELECT id FROM datasets WHERE id = ${datasetId} AND user_id = ${userId}`
-    );
+    const existing = await db.query.datasets.findFirst({
+      where: and(eq(datasets.id, datasetId), eq(datasets.userId, userId)),
+    });
     
-    if (!Array.isArray(datasetResult) || datasetResult.length === 0) {
+    if (!existing) {
       return NextResponse.json(
         { error: 'Dataset not found or you do not have permission to update it' },
         { status: 404 }
       );
     }
     
-    // Build update fields
-    const updateFields = [];
-    const values: any[] = [];
-    
-    if (body.name) {
-      updateFields.push('name = $1');
-      values.push(body.name);
+    const updateData: Partial<typeof datasets.$inferInsert> = {
+      updatedAt: new Date(),
+    };
+    if (body.name !== undefined) updateData.name = body.name;
+    if (body.query !== undefined) updateData.query = body.query;
+    if (body.refresh_interval !== undefined || body.refreshInterval !== undefined) {
+      updateData.refreshInterval = body.refresh_interval || body.refreshInterval;
     }
-    
-    if (body.query) {
-      updateFields.push('query = $2');
-      values.push(body.query);
+    if (body.connection_id !== undefined || body.connectionId !== undefined) {
+      updateData.connectionId = parseInt(body.connection_id || body.connectionId, 10);
     }
+    if (body.config !== undefined) updateData.config = body.config;
     
-    if (body.refresh_interval) {
-      updateFields.push('refresh_interval = $3');
-      values.push(body.refresh_interval);
-    }
-    
-    if (body.connection_id) {
-      updateFields.push('connection_id = $4');
-      values.push(parseInt(body.connection_id));
-    }
-    
-    if (body.config) {
-      updateFields.push('config = $5');
-      values.push(JSON.stringify(body.config));
-    }
-    
-    if (updateFields.length === 0) {
-      return NextResponse.json(
-        { error: 'No fields to update' },
-        { status: 400 }
-      );
-    }
-    
-    // Update dataset
-    const updateResult = await db.execute(
-      sql`
-        UPDATE datasets 
-        SET ${sql.raw(updateFields.join(', '))}, updated_at = NOW()
-        WHERE id = ${datasetId} AND user_id = ${userId}
-        RETURNING *
-      `,
-      ...values
-    );
-    
-    // Get updated dataset
-    const updatedDataset = Array.isArray(updateResult) && updateResult.length > 0 
-      ? updateResult[0] 
-      : null;
-    
-    if (!updatedDataset) {
-      return NextResponse.json(
-        { error: 'Failed to update dataset' },
-        { status: 500 }
-      );
-    }
-    
-    // Process the dataset to be serializable
-    const plainObject: Record<string, any> = {};
-    for (const key in updatedDataset) {
-      let value = updatedDataset[key];
-      // Convert dates to ISO strings
-      if (value instanceof Date) {
-        value = value.toISOString();
-      }
-      plainObject[key] = value;
-    }
+    const [updated] = await db
+      .update(datasets)
+      .set(updateData)
+      .where(and(eq(datasets.id, datasetId), eq(datasets.userId, userId)))
+      .returning();
     
     return NextResponse.json({
       success: true,
       message: 'Dataset updated successfully',
-      dataset: plainObject
+      dataset: updated,
     });
   } catch (error) {
     console.error('Dataset update error:', error);

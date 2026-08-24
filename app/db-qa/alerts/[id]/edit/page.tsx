@@ -8,13 +8,14 @@ export const metadata: Metadata = {
 };
 
 interface EditAlertPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EditAlertPage({ params }: EditAlertPageProps) {
-  const id = await params.id;
+  const { id } = await params;
+
   
   return (
     <AppLayout>

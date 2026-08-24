@@ -1,11 +1,19 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { ToastContext, ToasterToast, ToastContextType } from './use-toast';
+import React, { useState, useEffect, createContext } from 'react';
+import { ToasterToast } from '@/lib/hooks/use-toast';
 import { ToastProvider as UIToastProvider, ToastViewport } from './toast';
-import { Toast, ToastTitle, ToastDescription, ToastClose, ToastAction } from './toast';
+import { Toast, ToastTitle, ToastDescription, ToastClose } from './toast';
+
+export interface ToastContextType {
+  toasts: ToasterToast[];
+  addToast: (toast: Omit<ToasterToast, 'id'>) => string;
+  updateToast: (id: string, toast: Partial<ToasterToast>) => void;
+  dismissToast: (id: string) => void;
+}
+
+export const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 const TOAST_REMOVE_DELAY = 3000;
+
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToasterToast[]>([]);

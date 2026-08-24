@@ -52,3 +52,24 @@ export interface ISchemaInfo {
     [tableName: string]: IColumnInfo[];
   };
 }
+
+export interface ChartConfig {
+  valueField?: string;
+  categoryField?: string;
+  aggregation?: string;
+  format?: 'number' | 'currency' | 'percentage' | string;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+  showIcon?: boolean;
+  icon?: string;
+  colorCode?: boolean;
+  chartTitle?: string;
+  comparison?: {
+    enabled?: boolean;
+    value?: number;
+    label?: string;
+    type?: 'percentage' | 'absolute';
+  };
+  [key: string]: any;
+}

@@ -30,7 +30,8 @@ export default function ConnectionDialog({
 }: ConnectionDialogProps) {
   const [name, setName] = useState(connection?.name || "");
   const [type, setType] = useState<ConnectionType>(connection?.type as ConnectionType || "csv");
-  const [config, setConfig] = useState(connection?.config || {});
+  const [config, setConfig] = useState<Record<string, any>>((connection?.config as Record<string, any>) || {});
+
   
   const queryClient = useQueryClient();
   const { toast } = useToast();

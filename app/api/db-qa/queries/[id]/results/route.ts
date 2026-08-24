@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/auth";
 // GET /api/db-qa/queries/[id]/results
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,11 +17,13 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
-    const id = Number(params.id);
+    const { id: paramId } = await params;
+    const id = Number(paramId);
     
     if (isNaN(id)) {
       return NextResponse.json({ error: "Invalid query ID" }, { status: 400 });
     }
+
     
     // Check if the query exists and belongs to the user
     const query = await db.query.dbQaQueries.findFirst({

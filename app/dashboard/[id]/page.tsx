@@ -10,9 +10,12 @@ import Link from 'next/link';
 import { GearIcon } from '@radix-ui/react-icons';
 import { Header } from '@/components/layout/header';
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: Promise<{ id: string }>;
 };
+
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -98,9 +101,10 @@ export default async function DashboardViewPage({ params }: Props) {
             </div>
             
             <div className="border rounded-md p-4">
-              <h3 className="text-sm text-muted-foreground mb-1">Visibility</h3>
-              <p className="font-medium">{dashboard.isPublic ? "Public" : "Private"}</p>
+              <h3 className="text-sm text-muted-foreground mb-1">Status</h3>
+              <p className="font-medium">{dashboard.isActive ? "Active" : "Inactive"}</p>
             </div>
+
           </div>
         </div>
       </div>

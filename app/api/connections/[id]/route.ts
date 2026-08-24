@@ -6,7 +6,7 @@ import { sql } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
@@ -18,9 +18,8 @@ export async function GET(
       );
     }
 
-    const userId = session.user.id;
-    params = await params
-    const connectionId = parseInt(params.id);
+    const { id } = await params;
+    const connectionId = parseInt(id, 10);
     
     // Get connection
     const connectionResult = await db.execute(
@@ -38,7 +37,7 @@ export async function GET(
     }
     
     // Process the connection to be serializable
-    const connection = connections[0];
+    const connection = connections[0] as Record<string, any>;
     const plainObject: Record<string, any> = {};
     for (const key in connection) {
       let value = connection[key];
@@ -62,7 +61,7 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
@@ -75,11 +74,12 @@ export async function DELETE(
     }
 
     const userId = session.user.id;
-    const connectionId = parseInt(params.id);
+    const { id } = await params;
+    const connectionId = parseInt(id, 10);
     
     // Ensure the user is authorized to delete this connection
     // For simplicity, we'll just verify they own the connection
-    const userIdNum = typeof userId === 'string' ? parseInt(userId) : userId;
+    const userIdNum = typeof userId === 'string' ? parseInt(userId, 10) : userId;
     
     const connectionResult = await db.execute(
       sql`SELECT * FROM connections WHERE id = ${connectionId} AND user_id = ${userIdNum}`
@@ -115,7 +115,7 @@ export async function DELETE(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
@@ -128,7 +128,8 @@ export async function PUT(
     }
 
     const userId = session.user.id;
-    const connectionId = parseInt(params.id);
+    const { id } = await params;
+    const connectionId = parseInt(id, 10);
     
     // Get request body
     const body = await request.json();
@@ -142,7 +143,7 @@ export async function PUT(
     }
     
     // Ensure the user is authorized to update this connection
-    const userIdNum = typeof userId === 'string' ? parseInt(userId) : userId;
+    const userIdNum = typeof userId === 'string' ? parseInt(userId, 10) : userId;
     
     const connectionResult = await db.execute(
       sql`SELECT * FROM connections WHERE id = ${connectionId} AND user_id = ${userIdNum}`
@@ -158,8 +159,8 @@ export async function PUT(
     }
     
     // Get existing connection to merge configs
-    const existingConnection = connections[0];
-    const existingConfig = existingConnection.config || {};
+    const existingConnection = connections[0] as Record<string, any>;
+    const existingConfig = (existingConnection.config as Record<string, any>) || {};
     
     // Create updated connection configuration
     const config = {
@@ -182,7 +183,7 @@ export async function PUT(
       hasHeaderRow: body.hasHeaderRow !== undefined ? body.hasHeaderRow : existingConfig.hasHeaderRow
     };
     
-    const spaceIdNum = body.spaceId ? parseInt(body.spaceId) : existingConnection.space_id;
+    const spaceIdNum = body.spaceId ? parseInt(body.spaceId, 10) : existingConnection.space_id;
     const configJson = JSON.stringify(config);
     
     // Update the connection
@@ -198,33 +199,33 @@ export async function PUT(
         id = ${connectionId} AND user_id = ${userIdNum}
     `);
     
-    // Get updated connection
-    const updatedConnection = await db.execute(sql`
-      SELECT * FROM connections WHERE id = ${connectionId}
-    `);
+    // Fetch and return the updated connection
+    const updatedResult = await db.execute(
+      sql`SELECT * FROM connections WHERE id = ${connectionId}`
+    );
     
-    // Serialize the connection for the response
-    let connection = null;
-    if (Array.isArray(updatedConnection) && updatedConnection.length > 0) {
-      const conn = updatedConnection[0];
-      connection = {} as Record<string, any>;
-      
-      // Create a serializable object from the row
-      for (const key in conn) {
-        let value = conn[key];
-        // Convert dates to ISO strings
-        if (value instanceof Date) {
-          value = value.toISOString();
-        }
-        connection[key] = value;
-      }
+    const updatedConnections = Array.isArray(updatedResult) ? updatedResult : [];
+    
+    if (updatedConnections.length === 0) {
+      return NextResponse.json(
+        { error: 'Failed to retrieve updated connection' },
+        { status: 500 }
+      );
     }
     
-    return NextResponse.json({
-      success: true,
-      message: 'Connection updated successfully',
-      connection
-    });
+    // Process the connection to be serializable
+    const updatedConnection = updatedConnections[0] as Record<string, any>;
+    const plainObject: Record<string, any> = {};
+    for (const key in updatedConnection) {
+      let value = updatedConnection[key];
+      // Convert dates to ISO strings
+      if (value instanceof Date) {
+        value = value.toISOString();
+      }
+      plainObject[key] = value;
+    }
+    
+    return NextResponse.json(plainObject);
   } catch (error) {
     console.error('Connection update error:', error);
     

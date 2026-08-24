@@ -178,9 +178,10 @@ export default function ChartConfig({
           <div className="flex items-center gap-2">
             <Checkbox
               id="toolTip"
-              checked={config.tooltip || false}
+              checked={Boolean(config.tooltip)}
               onCheckedChange={(checked) => updateConfig("tooltip", checked)}
             />
+
             <Label htmlFor="toolTip">Enable Tooltip</Label>
           </div>
           {config.tooltip && (

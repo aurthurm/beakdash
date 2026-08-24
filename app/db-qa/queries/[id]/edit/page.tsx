@@ -8,13 +8,14 @@ export const metadata: Metadata = {
 };
 
 interface EditQueryPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EditQueryPage({ params }: EditQueryPageProps) {
-  const id = await params.id;
+  const { id } = await params;
+
   
   return (
     <AppLayout>

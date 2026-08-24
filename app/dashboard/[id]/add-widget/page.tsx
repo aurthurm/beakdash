@@ -7,10 +7,13 @@ import { dashboards } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { AddWidgetClient } from "./client-page";
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
-  params: {
+  params: Promise<{
+
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -19,6 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: "Add a widget to your dashboard",
   };
 }
+
 
 export default async function AddWidgetPage({
   params,

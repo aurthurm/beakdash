@@ -151,15 +151,16 @@ export async function POST(request: NextRequest) {
           value = value.toISOString();
         }
         // Mask sensitive fields in the response
-        if (key === 'config') {
-          const config = JSON.parse(value);
+        if (key === 'config' && value) {
+          const config = typeof value === 'string' ? JSON.parse(value) : { ...value };
           if (config.password) config.password = '********';
           if (config.apiKey) config.apiKey = '********';
-          value = JSON.stringify(config);
+          value = config;
         }
         connection[key] = value;
       }
     }
+
     
     return NextResponse.json({
       success: true,

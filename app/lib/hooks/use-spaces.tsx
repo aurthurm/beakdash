@@ -320,6 +320,7 @@ export function useSpaces() {
     currentSpaceId,
     currentSpace,
     setCurrentSpaceId,
+    deselectCurrentSpace: () => setCurrentSpaceId(null),
     switchToSpace,
     switchingSpace
   };

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function AuthPage() {
+function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
@@ -24,11 +24,10 @@ export default function AuthPage() {
     setSuccess('');
 
     try {
-      // Handle input as either username or email
-      const usernameOrEmail = email; // Using the email state variable
+      const usernameOrEmail = email;
       
       const result = await signIn('credentials', {
-        username: usernameOrEmail, // Send as username for auth handler
+        username: usernameOrEmail,
         password,
         redirect: false,
         callbackUrl,
@@ -37,7 +36,6 @@ export default function AuthPage() {
       if (result?.error) {
         setError('Invalid username or password');
       } else {
-        // Redirect to dashboard on successful login
         router.push(callbackUrl);
       }
     } catch (err) {
@@ -144,5 +142,13 @@ export default function AuthPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-8">Loading...</div>}>
+      <AuthForm />
+    </Suspense>
   );
 }

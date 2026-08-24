@@ -7,21 +7,21 @@ import { sql } from 'drizzle-orm';
 // GET handler for retrieving query execution history
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // Parse query ID
-    const id = await params.id;
-    const queryId = parseInt(id);
+    const { id } = await params;
+    const queryId = parseInt(id, 10);
+    const userId = parseInt(session.user.id, 10);
     
     if (isNaN(queryId)) {
       return NextResponse.json(
@@ -33,8 +33,9 @@ export async function GET(
     // Get query first to verify ownership
     const queryResult = await db.execute(sql`
       SELECT * FROM db_qa_queries 
-      WHERE id = ${queryId} AND user_id = ${session.user.id}
+      WHERE id = ${queryId} AND user_id = ${userId}
     `);
+
 
     const queryRows = Array.isArray(queryResult) ? queryResult : [];
     

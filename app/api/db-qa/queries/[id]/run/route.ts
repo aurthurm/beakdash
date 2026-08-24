@@ -6,20 +6,20 @@ import { runQueryOnConnection } from "@/lib/db/run-query";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
     
-    const id = await params.id;
-    const queryId = parseInt(id);
+    const { id } = await params;
+    const queryId = parseInt(id, 10);
     
     if (isNaN(queryId)) {
       return NextResponse.json(
@@ -29,7 +29,7 @@ export async function POST(
     }
     
     // Get user ID from session
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id, 10);
     
     // Fetch the query
     const queryResult = await sql`
@@ -47,7 +47,8 @@ export async function POST(
       );
     }
     
-    const query = queryResult[0];
+    const query = queryResult[0] as Record<string, any>;
+
     
     // Run the query on the connection
     try {

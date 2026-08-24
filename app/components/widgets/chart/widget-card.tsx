@@ -53,7 +53,8 @@ export default function WidgetCard({
     <Card className="overflow-hidden flex flex-col h-full">
       <CardHeader className="p-3 pb-0">
         <div className="flex items-center justify-between">
-          <WidgetHeader name={truncateString(widget.name, 30)} description={widget.description} />
+          <WidgetHeader name={truncateString(widget.name, 30)} description={widget.description || undefined} />
+
           {showControls && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

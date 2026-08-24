@@ -7,21 +7,21 @@ import { sql } from 'drizzle-orm';
 // GET handler for retrieving alert history
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // Parse alert ID
-    const id = await params.id;
-    const alertId = parseInt(id);
+    const { id } = await params;
+    const alertId = parseInt(id, 10);
+    const userId = parseInt(session.user.id, 10);
     
     if (isNaN(alertId)) {
       return NextResponse.json(
@@ -33,8 +33,9 @@ export async function GET(
     // Check if alert exists and belongs to the user
     const alertCheckResult = await db.execute(sql`
       SELECT * FROM db_qa_alerts 
-      WHERE id = ${alertId} AND user_id = ${session.user.id}
+      WHERE id = ${alertId} AND user_id = ${userId}
     `);
+
 
     const alertRows = Array.isArray(alertCheckResult) ? alertCheckResult : [];
     if (alertRows.length === 0) {

@@ -22,9 +22,11 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const userId = parseInt(session.user.id, 10);
+
     // Get user API keys
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
       columns: {
         settings: true,
       },
@@ -35,7 +37,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Return API keys
-    const settings = user.settings as Record<string, any>;
+    const settings = (user.settings as Record<string, any>) || {};
     return NextResponse.json({
       apiKeys: settings.apiKeys || [],
     });
@@ -52,6 +54,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const userId = parseInt(session.user.id, 10);
     const body = await req.json();
     const { name, permissions } = body;
 
@@ -74,11 +77,11 @@ export async function POST(req: NextRequest) {
 
     // Update user settings with new API key
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
       columns: { settings: true },
     });
 
-    const settings = user?.settings as Record<string, any> || {};
+    const settings = (user?.settings as Record<string, any>) || {};
     const apiKeys = settings.apiKeys || [];
 
     await db
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest) {
           apiKeys: [...apiKeys, newApiKey],
         },
       })
-      .where(eq(users.id, session.user.id));
+      .where(eq(users.id, userId));
 
     return NextResponse.json({ apiKey: newApiKey });
   } catch (error) {
@@ -105,6 +108,7 @@ export async function DELETE(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const userId = parseInt(session.user.id, 10);
     const { searchParams } = new URL(req.url);
     const apiKeyId = searchParams.get('id');
 
@@ -114,11 +118,11 @@ export async function DELETE(req: NextRequest) {
 
     // Get current API keys
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
       columns: { settings: true },
     });
 
-    const settings = user?.settings as Record<string, any> || {};
+    const settings = (user?.settings as Record<string, any>) || {};
     const apiKeys = settings.apiKeys || [];
 
     // Remove the specified API key
@@ -133,11 +137,12 @@ export async function DELETE(req: NextRequest) {
           apiKeys: updatedApiKeys,
         },
       })
-      .where(eq(users.id, session.user.id));
+      .where(eq(users.id, userId));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting API key:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
-} 
+}
+ 

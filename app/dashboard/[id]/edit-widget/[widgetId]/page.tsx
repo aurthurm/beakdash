@@ -7,12 +7,16 @@ import { widgets } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { EditWidgetClient } from "./client-page";
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
-  params: {
+  params: Promise<{
+
     id: string;
     widgetId: string;
-  };
+  }>;
 }
+
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id, widgetId } = await params;

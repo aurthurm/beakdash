@@ -1,15 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Connection } from '@/lib/db/schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { useDbQaQueries } from '@/lib/hooks/use-db-qa-queries';
 import { useSpaces } from '@/lib/hooks/use-spaces';
-import { DbQaQueryForm } from '@/components/db-qa/query-form';
+import { QueryForm } from '@/components/db-qa/query-form';
 
 interface CreateDbQaQueryClientProps {
   connections: Connection[];
@@ -17,37 +14,18 @@ interface CreateDbQaQueryClientProps {
 
 export function CreateDbQaQueryClient({ connections }: CreateDbQaQueryClientProps) {
   const router = useRouter();
-  const { toast } = useToast();
-  const { currentSpaceId } = useSpaces();
-  const { createDbQaQueryMutation } = useDbQaQueries();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { spaces = [], currentSpaceId } = useSpaces();
 
-  const handleSubmit = async (data: any) => {
-    setIsSubmitting(true);
-    try {
-      // Add the current space ID to the data if available
-      const queryData = {
-        ...data,
-        spaceId: currentSpaceId || null,
-      };
+  const formattedConnections = connections.map((c) => ({
+    id: c.id,
+    name: c.name,
+    type: c.type,
+  }));
 
-      await createDbQaQueryMutation.mutateAsync(queryData);
-      toast({
-        title: 'Success',
-        description: 'Quality check created successfully',
-      });
-      router.push('/db-qa/queries');
-    } catch (error) {
-      console.error('Error creating quality check:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create quality check',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const formattedSpaces = spaces.map((s) => ({
+    id: s.id,
+    name: s.name,
+  }));
 
   return (
     <div className="space-y-6">
@@ -63,10 +41,11 @@ export function CreateDbQaQueryClient({ connections }: CreateDbQaQueryClientProp
 
       <Card>
         <CardContent className="pt-6">
-          <DbQaQueryForm 
-            connections={connections}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
+          <QueryForm
+            connections={formattedConnections}
+            spaces={formattedSpaces}
+            mode="create"
+            initialData={currentSpaceId ? { spaceId: currentSpaceId } : undefined}
           />
         </CardContent>
       </Card>

@@ -11,11 +11,10 @@ export const metadata: Metadata = {
 export default async function EditConnectionPage({ 
   params,
 }: { 
-  params: { id: string } 
+  params: Promise<{ id: string }>;
 }) {
-  // Get the params, using nullish coalescing to handle undefined
-  const resolvedParams = await Promise.resolve(params);
-  const connectionId = resolvedParams.id;
+  const { id: connectionId } = await params;
+
   
   return (
     <AppLayout>

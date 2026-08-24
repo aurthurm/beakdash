@@ -7,21 +7,21 @@ import { sql } from 'drizzle-orm';
 // GET handler for retrieving a specific alert
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // Parse alert ID
-    const id = await params.id;
-    const alertId = parseInt(id);
+    const { id } = await params;
+    const alertId = parseInt(id, 10);
+    const userId = parseInt(session.user.id, 10);
     
     if (isNaN(alertId)) {
       return NextResponse.json(
@@ -38,7 +38,7 @@ export async function GET(
       FROM db_qa_alerts a
       LEFT JOIN db_qa_queries q ON a.query_id = q.id
       LEFT JOIN spaces s ON a.space_id = s.id
-      WHERE a.id = ${alertId} AND a.user_id = ${session.user.id}
+      WHERE a.id = ${alertId} AND a.user_id = ${userId}
     `);
 
     // Check if alert exists
@@ -51,7 +51,7 @@ export async function GET(
     }
 
     // Get the alert details
-    const alert = rows[0];
+    const alert = rows[0] as Record<string, any>;
 
     // Convert date fields to ISO strings
     const serializedAlert: Record<string, any> = {};
@@ -77,21 +77,21 @@ export async function GET(
 // PUT handler for updating an alert
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // Parse alert ID
-    const id = await params.id;
-    const alertId = parseInt(id);
+    const { id } = await params;
+    const alertId = parseInt(id, 10);
+    const userId = parseInt(session.user.id, 10);
     
     if (isNaN(alertId)) {
       return NextResponse.json(
@@ -103,7 +103,7 @@ export async function PUT(
     // Check if alert exists and belongs to the user
     const alertCheckResult = await db.execute(sql`
       SELECT * FROM db_qa_alerts 
-      WHERE id = ${alertId} AND user_id = ${session.user.id}
+      WHERE id = ${alertId} AND user_id = ${userId}
     `);
 
     const alertRows = Array.isArray(alertCheckResult) ? alertCheckResult : [];
@@ -126,12 +126,12 @@ export async function PUT(
     }
     
     // Convert queryId to number
-    const queryIdNum = parseInt(body.queryId);
+    const queryIdNum = parseInt(body.queryId, 10);
     
     // Check if the query exists and belongs to the user
     const queryResult = await db.execute(sql`
       SELECT * FROM db_qa_queries 
-      WHERE id = ${queryIdNum} AND user_id = ${session.user.id}
+      WHERE id = ${queryIdNum} AND user_id = ${userId}
     `);
     
     const queryRows = Array.isArray(queryResult) ? queryResult : [];
@@ -143,7 +143,7 @@ export async function PUT(
     }
     
     // Get the query's space_id if present
-    const spaceId = queryRows[0].space_id;
+    const spaceId = (queryRows[0] as Record<string, any>).space_id;
     
     // Update the alert
     await db.execute(sql`
@@ -163,7 +163,7 @@ export async function PUT(
         throttle_minutes = ${body.throttleMinutes || 60},
         status = ${body.status || 'pending'},
         updated_at = NOW()
-      WHERE id = ${alertId} AND user_id = ${session.user.id}
+      WHERE id = ${alertId} AND user_id = ${userId}
     `);
 
     // Get the updated alert
@@ -175,7 +175,7 @@ export async function PUT(
     // Serialize the updated alert
     let updatedAlert = null;
     if (Array.isArray(updatedAlertResult) && updatedAlertResult.length > 0) {
-      const row = updatedAlertResult[0];
+      const row = updatedAlertResult[0] as Record<string, any>;
       updatedAlert = {} as Record<string, any>;
       
       // Create a serializable object from the row
@@ -207,21 +207,21 @@ export async function PUT(
 // DELETE handler for deleting an alert
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get authenticated user
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // Parse alert ID
-    const id = await params.id;
-    const alertId = parseInt(id);
+    const { id } = await params;
+    const alertId = parseInt(id, 10);
+    const userId = parseInt(session.user.id, 10);
     
     if (isNaN(alertId)) {
       return NextResponse.json(
@@ -232,8 +232,8 @@ export async function DELETE(
 
     // Check if alert exists and belongs to the user
     const alertCheckResult = await db.execute(sql`
-      SELECT * FROM db_qa_alerts 
-      WHERE id = ${alertId} AND user_id = ${session.user.id}
+      SELECT id FROM db_qa_alerts 
+      WHERE id = ${alertId} AND user_id = ${userId}
     `);
 
     const alertRows = Array.isArray(alertCheckResult) ? alertCheckResult : [];
@@ -244,21 +244,27 @@ export async function DELETE(
       );
     }
 
+    // Delete associated notifications first
+    await db.execute(sql`
+      DELETE FROM db_qa_alert_notifications 
+      WHERE alert_id = ${alertId}
+    `);
+
     // Delete the alert
     await db.execute(sql`
       DELETE FROM db_qa_alerts 
-      WHERE id = ${alertId} AND user_id = ${session.user.id}
+      WHERE id = ${alertId} AND user_id = ${userId}
     `);
 
     return NextResponse.json({
       success: true,
       message: 'Alert deleted successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting alert:', error);
     
     return NextResponse.json(
-      { error: 'Failed to delete alert' },
+      { error: `Failed to delete alert: ${error.message}` },
       { status: 500 }
     );
   }

@@ -39,7 +39,10 @@ import {
   CollapsibleTrigger
 } from "@/components/ui/collapsible";
 import { Card } from "@/components/ui/card";
+import Editor from "@monaco-editor/react";
 import { MonacoSQLEditor } from "@/components/code/monaco-sql-editor";
+
+
 import { useToast } from "@/lib/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Dataset, Connection } from "@/lib/db/schema";

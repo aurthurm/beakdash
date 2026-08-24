@@ -13,6 +13,7 @@ export async function PUT(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const userId = parseInt(session.user.id, 10);
     const body = await req.json();
     const { currentPassword, newPassword } = body;
 
@@ -26,7 +27,7 @@ export async function PUT(req: NextRequest) {
 
     // Get user
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
     });
 
     if (!user) {
@@ -48,11 +49,12 @@ export async function PUT(req: NextRequest) {
       .set({
         password: hashedPassword,
       })
-      .where(eq(users.id, session.user.id));
+      .where(eq(users.id, userId));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating password:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
-} 
+}
+ 

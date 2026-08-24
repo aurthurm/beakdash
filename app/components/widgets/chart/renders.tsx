@@ -62,7 +62,8 @@ const renderAreaChart = (config: WidgetConfig, data: Record<string, any>[]) => {
     });
   }
   const antAreaConfig = antConfig.toAntAreaConfig(config);
-  return <Area data={data} {...antAreaConfig} />;
+  return <Area data={data} {...(antAreaConfig as any)} />;
+
 };
 
 // Render a pie chart / donut chart

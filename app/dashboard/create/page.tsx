@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { db } from '@/lib/db';
 import { spaces } from '@/lib/db/schema';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'BeakDash - Create Dashboard',
   description: 'Create a new dashboard',
 };
+
 
 export default async function CreateDashboardPage() {
   // Fetch all spaces to populate the dropdown

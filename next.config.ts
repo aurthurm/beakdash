@@ -6,10 +6,15 @@ const nextConfig = {
   transpilePackages: [],
   // Customize the build output
   output: 'standalone',
-  // Setup image domains for `next/image` optimization
+  // Setup image remote patterns for `next/image` optimization
   images: {
-    domains: ['img.clerk.com', 'localhost', 'avatars.githubusercontent.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'img.clerk.com' },
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
+    ],
   },
+
   // Experimental features
   experimental: {
     // Removing allowedDevOrigins as it's not supported in current Next.js version

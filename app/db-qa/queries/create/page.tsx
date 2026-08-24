@@ -6,10 +6,13 @@ import { connections } from "@/lib/db/schema";
 import { authOptions } from "@/lib/auth";
 import { CreateDbQaQueryClient } from "./client-page";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "Create Quality Check",
   description: "Create a new database quality check",
 };
+
 
 export default async function CreateDbQaQueryPage() {
   const session = await getServerSession(authOptions);

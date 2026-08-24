@@ -7,25 +7,30 @@ import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'BeakDash - Dashboards',
   description: 'View and manage your dashboards',
 };
 
+
 // This is a server component that can fetch data
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: { spaceId?: string };
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+
   // Get the current space ID from the search parameters
   let currentSpaceId = null;
   
   // In Next.js 15, we need to await searchParams before accessing its properties
   const params = await searchParams;
-  const spaceIdStr = params?.spaceId ?? null;
+  const spaceIdStr = typeof params?.spaceId === 'string' ? params.spaceId : null;
   if (spaceIdStr) {
-    const spaceIdParam = parseInt(spaceIdStr);
+    const spaceIdParam = parseInt(spaceIdStr, 10);
+
     if (!isNaN(spaceIdParam)) {
       currentSpaceId = spaceIdParam;
     }

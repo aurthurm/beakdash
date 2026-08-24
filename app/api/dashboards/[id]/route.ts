@@ -1,137 +1,104 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { dashboards } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
-    const authToken = cookies().get('authToken')?.value;
-    
-    if (!authToken) {
-      return NextResponse.json(
-        { message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    // Forward request to existing backend
-    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/dashboards/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+
+    const { id } = await params;
+    const dashboardId = parseInt(id, 10);
+    if (isNaN(dashboardId)) {
+      return NextResponse.json({ error: 'Invalid dashboard ID' }, { status: 400 });
+    }
+
+    const dashboard = await db.query.dashboards.findFirst({
+      where: eq(dashboards.id, dashboardId),
     });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(
-        { message: errorData.message || 'Failed to fetch dashboard' },
-        { status: response.status }
-      );
+
+    if (!dashboard) {
+      return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 });
     }
-    
-    const dashboard = await response.json();
+
     return NextResponse.json(dashboard);
   } catch (error) {
-    console.error(`Dashboard fetch error for ID ${params.id}:`, error);
-    
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Dashboard fetch error:', error);
+    return NextResponse.json({ error: 'Failed to fetch dashboard' }, { status: 500 });
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
-    const authToken = cookies().get('authToken')?.value;
-    
-    if (!authToken) {
-      return NextResponse.json(
-        { message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    // Get request body
+
+    const { id } = await params;
+    const dashboardId = parseInt(id, 10);
+    if (isNaN(dashboardId)) {
+      return NextResponse.json({ error: 'Invalid dashboard ID' }, { status: 400 });
+    }
+
     const body = await request.json();
-    
-    // Forward request to existing backend
-    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/dashboards/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
-      body: JSON.stringify(body),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(
-        { message: errorData.message || 'Failed to update dashboard' },
-        { status: response.status }
-      );
+
+    const [updatedDashboard] = await db
+      .update(dashboards)
+      .set({
+        name: body.name,
+        description: body.description,
+        spaceId: body.spaceId ? parseInt(body.spaceId, 10) : undefined,
+        layout: body.layout,
+        isActive: body.isActive !== undefined ? body.isActive : undefined,
+        updatedAt: new Date(),
+      })
+      .where(eq(dashboards.id, dashboardId))
+      .returning();
+
+    if (!updatedDashboard) {
+      return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 });
     }
-    
-    const dashboard = await response.json();
-    return NextResponse.json(dashboard);
+
+    return NextResponse.json(updatedDashboard);
   } catch (error) {
-    console.error(`Dashboard update error for ID ${params.id}:`, error);
-    
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Dashboard update error:', error);
+    return NextResponse.json({ error: 'Failed to update dashboard' }, { status: 500 });
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
-    const authToken = cookies().get('authToken')?.value;
-    
-    if (!authToken) {
-      return NextResponse.json(
-        { message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    // Forward request to existing backend
-    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/dashboards/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(
-        { message: errorData.message || 'Failed to delete dashboard' },
-        { status: response.status }
-      );
+
+    const { id } = await params;
+    const dashboardId = parseInt(id, 10);
+    if (isNaN(dashboardId)) {
+      return NextResponse.json({ error: 'Invalid dashboard ID' }, { status: 400 });
     }
-    
-    return NextResponse.json({ message: 'Dashboard deleted successfully' });
+
+    await db.delete(dashboards).where(eq(dashboards.id, dashboardId));
+
+    return NextResponse.json({ success: true, message: 'Dashboard deleted successfully' });
   } catch (error) {
-    console.error(`Dashboard deletion error for ID ${params.id}:`, error);
-    
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Dashboard deletion error:', error);
+    return NextResponse.json({ error: 'Failed to delete dashboard' }, { status: 500 });
   }
 }

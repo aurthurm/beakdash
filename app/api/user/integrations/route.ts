@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import crypto from 'crypto';
 
 interface Integration {
   id: string;
@@ -22,9 +23,11 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const userId = parseInt(session.user.id, 10);
+
     // Get user integrations
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
       columns: {
         settings: true,
       },
@@ -35,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Return integrations
-    const settings = user.settings as Record<string, any>;
+    const settings = (user.settings as Record<string, any>) || {};
     return NextResponse.json({
       integrations: settings.integrations || [],
     });
@@ -52,6 +55,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const userId = parseInt(session.user.id, 10);
     const body = await req.json();
     const { name, type, config } = body;
 
@@ -71,11 +75,11 @@ export async function POST(req: NextRequest) {
 
     // Update user settings with new integration
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
       columns: { settings: true },
     });
 
-    const settings = user?.settings as Record<string, any> || {};
+    const settings = (user?.settings as Record<string, any>) || {};
     const integrations = settings.integrations || [];
 
     await db
@@ -86,7 +90,7 @@ export async function POST(req: NextRequest) {
           integrations: [...integrations, newIntegration],
         },
       })
-      .where(eq(users.id, session.user.id));
+      .where(eq(users.id, userId));
 
     return NextResponse.json({ integration: newIntegration });
   } catch (error) {
@@ -102,6 +106,7 @@ export async function PUT(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const userId = parseInt(session.user.id, 10);
     const body = await req.json();
     const { id, name, type, config, status } = body;
 
@@ -111,11 +116,11 @@ export async function PUT(req: NextRequest) {
 
     // Get current integrations
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
       columns: { settings: true },
     });
 
-    const settings = user?.settings as Record<string, any> || {};
+    const settings = (user?.settings as Record<string, any>) || {};
     const integrations = settings.integrations || [];
 
     // Update the specified integration
@@ -141,7 +146,7 @@ export async function PUT(req: NextRequest) {
           integrations: updatedIntegrations,
         },
       })
-      .where(eq(users.id, session.user.id));
+      .where(eq(users.id, userId));
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -157,6 +162,7 @@ export async function DELETE(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const userId = parseInt(session.user.id, 10);
     const { searchParams } = new URL(req.url);
     const integrationId = searchParams.get('id');
 
@@ -166,11 +172,11 @@ export async function DELETE(req: NextRequest) {
 
     // Get current integrations
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
       columns: { settings: true },
     });
 
-    const settings = user?.settings as Record<string, any> || {};
+    const settings = (user?.settings as Record<string, any>) || {};
     const integrations = settings.integrations || [];
 
     // Remove the specified integration
@@ -187,11 +193,12 @@ export async function DELETE(req: NextRequest) {
           integrations: updatedIntegrations,
         },
       })
-      .where(eq(users.id, session.user.id));
+      .where(eq(users.id, userId));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting integration:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
-} 
+}
+ 

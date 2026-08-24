@@ -10,13 +10,17 @@ import { db } from '@/lib/db';
 import { spaces } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
-  params: { id: string };
+
+  params: Promise<{ id: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
   const space = await db.query.spaces.findFirst({
-    where: eq(spaces.id, parseInt(params.id)),
+    where: eq(spaces.id, parseInt(id, 10)),
   });
 
   if (!space) {
@@ -38,7 +42,8 @@ export default async function EditSpacePage({ params }: Props) {
     return notFound();
   }
   
-  const spaceId = parseInt(params.id);
+  const { id } = await params;
+  const spaceId = parseInt(id, 10);
   
   // Fetch the space details
   const space = await db.query.spaces.findFirst({
@@ -113,8 +118,9 @@ export default async function EditSpacePage({ params }: Props) {
                   id="isDefault"
                   name="isDefault"
                   className="rounded border-gray-300 text-primary focus:ring-primary/20"
-                  defaultChecked={space.isDefault}
+                  defaultChecked={space.isDefault ?? false}
                 />
+
                 <label htmlFor="isDefault" className="text-sm font-medium leading-none">
                   Make this the default space
                 </label>
