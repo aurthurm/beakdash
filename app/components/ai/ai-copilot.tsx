@@ -4,17 +4,23 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
-import { MessageSquare, X, Minimize, Maximize, Sparkles, HelpCircle } from "lucide-react";
+import { MessageSquare, X, Minimize, Sparkles, HelpCircle, Code, Copy, Check, TrendingUp, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Dataset, chartTypes } from "@/lib/db/schema";
+import { Dataset } from "@/lib/db/schema";
 import { AIProcessingStatus } from "@/components/ai/ai-processing-status";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  generatedSql?: string;
+  suggestedChartType?: string;
+  suggestedConfig?: Record<string, any>;
+  insights?: string[];
+  isAIGenerated?: boolean;
   timestamp: Date;
   context?: {
     datasetId?: number;
@@ -42,14 +48,15 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
   const [selectedDatasetId, setSelectedDatasetId] = useState<number | undefined>(activeDatasetId);
   const [selectedChartType, setSelectedChartType] = useState<string | undefined>(activeChartType);
   const [showDatasetSelector, setShowDatasetSelector] = useState(false);
-  const [datasetKey, setDatasetKey] = useState<string>(`ai-copilot-${Date.now()}`);
+  const [copiedSqlId, setCopiedSqlId] = useState<string | null>(null);
+  const [datasetKey] = useState<string>(`ai-copilot-${Date.now()}`);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
       content: widgetContext 
-        ? `Hello! I'm your AI Copilot. I see you're working with the "${widgetContext.name}" ${widgetContext.type} widget. How can I help you with this visualization today?`
-        : "Hello! I'm your AI Copilot. How can I help you with your dashboard today?",
+        ? `Hello! I'm your AI Copilot. I see you're working with the "${widgetContext.name}" ${widgetContext.type} widget. Ask me to explain it, optimize the queries, or suggest new metrics.`
+        : "Hello! I'm your AI Copilot. Ask me to generate SQL queries from natural language, recommend charts, or discover anomalies.",
       timestamp: new Date(),
       context: widgetContext ? {
         datasetId: activeDatasetId,
@@ -58,8 +65,6 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
     },
   ]);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [interactedMessageIds, setInteractedMessageIds] = useState<Set<string>>(new Set());
-  const [interactedSuggestionMessageIds, setInteractedSuggestionMessageIds] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch available datasets
@@ -75,47 +80,40 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
     }
   }, [messages]);
 
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSqlId(id);
+    setTimeout(() => setCopiedSqlId(null), 2000);
+  };
+
   // Send message to AI Copilot
   const aiMutation = useMutation({
     mutationFn: async (message: string) => {
-      try {
-        const response = await apiRequest("POST", "/api/ai/copilot", {
-          prompt: message,
-          context: messages.slice(-5).map(m => ({ role: m.role, content: m.content })),
-          datasetId: selectedDatasetId,
-          chartType: selectedChartType,
-          widgetContext: widgetContext ? {
-            id: widgetContext.id,
-            name: widgetContext.name,
-            type: widgetContext.type,
-            config: widgetContext.config
-          } : undefined,
-        });
-        
-        // Type guard to check if we have a proper response object
-        if (response && typeof response === 'object' && 'response' in response) {
-          return response as { response: string; timestamp: string };
-        }
-        
-        // Fallback if the response is not in the expected format
-        return {
-          response: "I'm sorry, I couldn't process that request.",
-          timestamp: new Date().toISOString(),
-        };
-      } catch (error) {
-        console.error("AI Copilot error:", error);
-        return {
-          response: "I encountered an error while processing your request. Please try again later.",
-          timestamp: new Date().toISOString(),
-        };
-      }
+      const response = await apiRequest("POST", "/api/ai/copilot", {
+        prompt: message,
+        context: messages.slice(-5).map(m => ({ role: m.role, content: m.content })),
+        datasetId: selectedDatasetId,
+        chartType: selectedChartType,
+        widgetContext: widgetContext ? {
+          id: widgetContext.id,
+          name: widgetContext.name,
+          type: widgetContext.type,
+          config: widgetContext.config
+        } : undefined,
+      });
+
+      return await response.json();
     },
     onSuccess: (data) => {
-      // Add AI response to messages
       const aiResponse: Message = {
         id: `ai-${Date.now()}`,
         role: "assistant",
-        content: data.response || "I'm sorry, I couldn't process that request.",
+        content: data.message || data.response || "Here are the results for your request.",
+        generatedSql: data.generatedSql,
+        suggestedChartType: data.suggestedChartType,
+        suggestedConfig: data.suggestedConfig,
+        insights: data.insights,
+        isAIGenerated: data.isAIGenerated,
         timestamp: new Date(data.timestamp || new Date()),
         context: {
           datasetId: selectedDatasetId,
@@ -126,40 +124,10 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
     },
   });
 
-  // Define the expected response types
-  interface ChartRecommendation {
-    chartType: string;
-    explanation: string;
-    suggestedConfig: string;
-    datasetId: number;
-  }
-
-  interface ChartImprovement {
-    suggestions: string[];
-    explanation: string;
-    widgetId: number;
-  }
-
-  interface KPISuggestion {
-    title: string;
-    description: string;
-    widgetType: string;
-    config: Record<string, any>;
-  }
-
-  interface KPISuggestions {
-    kpiSuggestions: KPISuggestion[];
-    explanation: string;
-    datasetId: number;
-  }
-
-  // Generate chart improvements
+  // Chart improvements mutation
   const chartImprovementsMutation = useMutation({
     mutationFn: async () => {
-      if (!widgetContext) {
-        throw new Error("Widget context is required for chart improvements");
-      }
-      
+      if (!widgetContext) throw new Error("Widget context required");
       const response = await apiRequest("POST", "/api/ai/chart-improvements", { 
         widgetContext: {
           id: widgetContext.id,
@@ -168,100 +136,80 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
           config: widgetContext.config
         } 
       });
-      
-      // Type guard to ensure we have proper chart improvements
-      if (response && typeof response === 'object' && 'suggestions' in response) {
-        return response as ChartImprovement;
-      }
-      
-      // Fallback if the response is not in the expected format
-      throw new Error("Received invalid chart improvements format");
+      return await response.json();
     },
-    onSuccess: (data: ChartImprovement) => {
-      // Add improvement suggestions to messages
-      const suggestionsFormatted = data.suggestions.map(suggestion => `• ${suggestion}`).join('\n');
+    onSuccess: (data) => {
+      const suggestionsFormatted = (data.suggestions || []).map((s: string) => `• ${s}`).join('\n');
       const improvementsMessage: Message = {
         id: `improvements-${Date.now()}`,
         role: "assistant",
-        content: `I've analyzed your "${widgetContext?.name}" widget and have some suggestions to improve it:\n\n${suggestionsFormatted}\n\n${data.explanation}\n\nWould you like me to help you implement any of these improvements?`,
+        content: `I've analyzed your "${widgetContext?.name}" widget and recommend the following visual improvements:\n\n${suggestionsFormatted}\n\n${data.explanation || ''}`,
+        insights: data.anomalies?.map((a: any) => a.description),
+        isAIGenerated: data.isAIGenerated,
         timestamp: new Date(),
-        context: widgetContext ? {
-          chartType: widgetContext.type
-        } : undefined
+        context: widgetContext ? { chartType: widgetContext.type } : undefined
       };
       setMessages(prev => [...prev, improvementsMessage]);
     },
   });
 
-  // Generate KPI suggestions
+  // KPI suggestions mutation
   const kpiSuggestionsMutation = useMutation({
     mutationFn: async (datasetId: number) => {
       const response = await apiRequest("POST", "/api/ai/kpi-suggestions", { datasetId });
-      
-      // Type guard to ensure we have proper KPI suggestions
-      if (response && typeof response === 'object' && 'kpiSuggestions' in response) {
-        return response as KPISuggestions;
-      }
-      
-      // Fallback if the response is not in the expected format
-      throw new Error("Received invalid KPI suggestions format");
+      return await response.json();
     },
-    onSuccess: (data: KPISuggestions) => {
-      // Format the KPI suggestions nicely
-      const suggestionsFormatted = data.kpiSuggestions.map(kpi => 
-        `• ${kpi.title} (${kpi.widgetType}): ${kpi.description}`
+    onSuccess: (data) => {
+      const suggestionsFormatted = (data.kpiSuggestions || []).map((kpi: any) => 
+        `• **${kpi.title}** (${kpi.widgetType}): ${kpi.description}`
       ).join('\n');
       
-      // Add KPI suggestions to messages
       const kpiMessage: Message = {
         id: `kpi-suggestions-${Date.now()}`,
         role: "assistant",
-        content: `Based on your dataset, here are some KPI widgets I recommend creating:\n\n${suggestionsFormatted}\n\n${data.explanation}\n\nWould you like me to help you create any of these KPI widgets?`,
+        content: `Here are the suggested high-impact KPI metrics for your dataset:\n\n${suggestionsFormatted}\n\n${data.explanation || ''}`,
+        isAIGenerated: data.isAIGenerated,
         timestamp: new Date(),
-        context: {
-          datasetId: data.datasetId
-        }
+        context: { datasetId: data.datasetId }
       };
       setMessages(prev => [...prev, kpiMessage]);
     },
   });
 
-  // Generate chart recommendation
+  // Chart recommendation mutation
   const chartRecommendationMutation = useMutation({
     mutationFn: async (datasetId: number) => {
       const response = await apiRequest("POST", "/api/ai/chart-recommendation", { datasetId });
-      
-      // Type guard to ensure we have a proper chart recommendation
-      if (response && typeof response === 'object' && 'chartType' in response) {
-        return response as ChartRecommendation;
-      }
-      
-      // Fallback if the response is not in the expected format
-      throw new Error("Received invalid chart recommendation format");
+      return await response.json();
     },
-    onSuccess: (data: ChartRecommendation) => {
-      // Add recommendation to messages
+    onSuccess: (data) => {
+      const primary = data.primary;
       const recommendationMessage: Message = {
         id: `recommendation-${Date.now()}`,
         role: "assistant",
-        content: `I've analyzed your dataset and recommend a ${data.chartType} chart.\n\n${data.explanation}\n\n${data.suggestedConfig}\n\nWould you like me to help you set up this chart?`,
+        content: primary
+          ? `I've analyzed your dataset structure and recommend a **${primary.chartType}** chart ("${primary.title}").\n\n${primary.explanation}`
+          : "Recommended visualization ready.",
+        suggestedChartType: primary?.chartType,
+        suggestedConfig: primary?.config,
+        isAIGenerated: data.isAIGenerated,
         timestamp: new Date(),
         context: {
           datasetId: selectedDatasetId,
-          chartType: data.chartType,
+          chartType: primary?.chartType,
         }
       };
       setMessages(prev => [...prev, recommendationMessage]);
-      setSelectedChartType(data.chartType);
+      if (primary?.chartType) {
+        setSelectedChartType(primary.chartType);
+      }
     },
   });
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!prompt.trim()) return;
 
-    // Add user message to chat
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -273,339 +221,218 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
       }
     };
     setMessages(prev => [...prev, userMessage]);
-    
-    // Send to AI
     aiMutation.mutate(prompt);
-    
-    // Clear input
     setPrompt("");
   };
 
-  const handleCreateChartClick = (message: Message) => {
-    if (!message.context?.datasetId || !message.context?.chartType) return;
-
-    const { datasetId, chartType } = message.context;
-
-    const userConfirmMessage: Message = {
-      id: `user-confirm-${Date.now()}`,
-      role: "user",
-      content: `Yes, please create the ${chartType} chart for dataset ${datasetId}.`,
-      timestamp: new Date(),
-      context: { datasetId, chartType }
-    };
-
-    const assistantResponseMessage: Message = {
-      id: `assistant-response-${Date.now()}`,
-      role: "assistant",
-      content: `Okay! I'll create a basic ${chartType} chart using dataset ${datasetId}. You can then customize it further using the widget editor. (Widget creation functionality is pending implementation).`,
-      timestamp: new Date(),
-      context: { datasetId, chartType }
-    };
-
-    setMessages(prev => [...prev, userConfirmMessage, assistantResponseMessage]);
-    setInteractedMessageIds(prev => new Set(prev).add(message.id));
-  };
-
-  const handleNoThanksClick = (message: Message) => {
-    const userDeclineMessage: Message = {
-      id: `user-decline-${Date.now()}`,
-      role: "user",
-      content: "No, thanks.",
-      timestamp: new Date(),
-    };
-
-    const assistantResponseMessage: Message = {
-      id: `assistant-acknowledge-${Date.now()}`,
-      role: "assistant",
-      content: "Alright. Let me know if you need anything else!",
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userDeclineMessage, assistantResponseMessage]);
-    setInteractedMessageIds(prev => new Set(prev).add(message.id));
-  };
-
-  const handleApplySuggestionClick = (message: Message, suggestionText: string) => {
-    const userMessage: Message = {
-      id: `user-apply-suggestion-${Date.now()}`,
-      role: "user",
-      content: `Yes, please apply this suggestion: "${suggestionText}"`,
-      timestamp: new Date(),
-      context: message.context,
-    };
-
-    const assistantMessage: Message = {
-      id: `assistant-apply-suggestion-${Date.now()}`,
-      role: "assistant",
-      content: `Okay! I'll apply the suggestion: "${suggestionText}". (Widget update functionality is pending implementation).`,
-      timestamp: new Date(),
-      context: message.context,
-    };
-
-    setMessages(prev => [...prev, userMessage, assistantMessage]);
-    setInteractedSuggestionMessageIds(prev => new Set(prev).add(message.id));
-  };
-
   const handleExplainChart = () => {
-    if (!widgetContext) {
-      // This case should ideally be prevented by disabling the button
-      const errorMessage: Message = {
-        id: `error-explain-${Date.now()}`,
-        role: "assistant",
-        content: "I need a specific widget to analyze before I can explain it. Please open the AI Copilot from a widget's menu.",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      return;
-    }
-
+    if (!widgetContext) return;
     const { type, name, config } = widgetContext;
-    const chartConfigString = JSON.stringify(config, null, 2); // Pretty print JSON
-    const constructedPrompt = `Please explain my current chart. It's a ${type} chart named '${name}' with the following configuration: \n\`\`\`json\n${chartConfigString}\n\`\`\`\nWhat does this chart represent and what insights might I gather from it?`;
-
+    const promptText = `Please explain my current ${type} chart named '${name}'. Configuration: ${JSON.stringify(config)}. What insights can we derive from it?`;
+    
     const userMessage: Message = {
-      id: `user-explain-chart-${Date.now()}`,
+      id: `user-${Date.now()}`,
       role: "user",
-      content: constructedPrompt,
+      content: promptText,
       timestamp: new Date(),
-      context: {
-        datasetId: activeDatasetId, // or derive from widgetContext.config if available
-        chartType: type,
-      }
     };
     setMessages(prev => [...prev, userMessage]);
-    aiMutation.mutate(constructedPrompt);
+    aiMutation.mutate(promptText);
   };
 
   const handleGetChartRecommendation = () => {
     if (!selectedDatasetId) {
-      // If no dataset is selected, show the dataset selector
       setShowDatasetSelector(true);
       return;
     }
-
     const promptMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: `Please analyze dataset ${selectedDatasetId} and recommend the best chart type for visualization.`,
+      content: `Analyze dataset #${selectedDatasetId} and recommend the best chart visualization.`,
       timestamp: new Date(),
-      context: {
-        datasetId: selectedDatasetId
-      }
     };
     setMessages(prev => [...prev, promptMessage]);
-    
-    // Generate recommendation
     chartRecommendationMutation.mutate(selectedDatasetId);
   };
 
   const handleGetChartImprovements = () => {
-    if (!widgetContext) {
-      // Show a message if there's no widget context
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        role: "assistant",
-        content: "I need a specific widget to analyze before I can offer improvement suggestions. Please open the AI Copilot from a widget's menu to get improvement suggestions.",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      return;
-    }
-
+    if (!widgetContext) return;
     const promptMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: `Please analyze my "${widgetContext.name}" widget and suggest improvements.`,
+      content: `Analyze my "${widgetContext.name}" widget for improvements and anomalies.`,
       timestamp: new Date(),
-      context: {
-        chartType: widgetContext.type
-      }
     };
     setMessages(prev => [...prev, promptMessage]);
-    
-    // Generate improvement suggestions
     chartImprovementsMutation.mutate();
   };
 
   const handleGetKPISuggestions = () => {
     if (!selectedDatasetId) {
-      // If no dataset is selected, show the dataset selector
       setShowDatasetSelector(true);
       return;
     }
-
     const promptMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: `Please suggest KPI widgets I could create from dataset ${selectedDatasetId}.`,
+      content: `Suggest executive KPI metrics for dataset #${selectedDatasetId}.`,
       timestamp: new Date(),
-      context: {
-        datasetId: selectedDatasetId
-      }
     };
     setMessages(prev => [...prev, promptMessage]);
-    
-    // Generate KPI suggestions
     kpiSuggestionsMutation.mutate(selectedDatasetId);
-  };
-
-  const toggleMinimize = () => {
-    setIsMinimized(!isMinimized);
   };
 
   if (isMinimized) {
     return (
       <Button
-        className="fixed bottom-4 right-4 z-40 rounded-full w-12 h-12 p-0 flex items-center justify-center shadow-lg"
-        onClick={toggleMinimize}
+        className="fixed bottom-4 right-4 z-40 rounded-full w-12 h-12 p-0 flex items-center justify-center shadow-xl bg-primary text-primary-foreground hover:scale-105 transition-all"
+        onClick={() => setIsMinimized(false)}
       >
-        <MessageSquare className="h-5 w-5" />
+        <Sparkles className="h-5 w-5" />
       </Button>
     );
   }
 
   return (
-    <Card className="fixed bottom-4 right-10 z-40 w-102 h-[48rem] flex flex-col shadow-lg border border-border overflow-hidden">
-      <CardHeader className="p-3 border-b flex flex-row items-center justify-between space-y-0">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-6 w-6 bg-primary">
-            <AvatarFallback>AI</AvatarFallback>
-          </Avatar>
-          <h3 className="font-medium text-sm">Dasher Assistant</h3>
+    <Card className="fixed bottom-4 right-6 z-40 w-[26rem] sm:w-[30rem] h-[38rem] flex flex-col shadow-2xl border border-border/80 bg-background/95 backdrop-blur-md rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
+      <CardHeader className="p-3.5 border-b flex flex-row items-center justify-between space-y-0 bg-muted/30">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm leading-tight flex items-center gap-1.5">
+              BeakDash Copilot
+              <Badge variant="outline" className="text-[10px] px-1 py-0 border-primary/30 text-primary font-normal">
+                AI Assistant
+              </Badge>
+            </h3>
+            <p className="text-[11px] text-muted-foreground">Natural Language BI & Query Intelligence</p>
+          </div>
         </div>
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleMinimize}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setIsMinimized(true)}>
             <Minimize className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
       </CardHeader>
       
-      <CardContent className="p-3 flex-1 overflow-y-auto">
-        {/* Processing status for real-time WebSocket updates */}
+      <CardContent className="p-3.5 flex-1 overflow-y-auto space-y-3.5">
         <AIProcessingStatus datasetKey={datasetKey} />
         
         {showDatasetSelector ? (
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium">Select a Dataset</h4>
+          <div className="p-3 rounded-lg border bg-card space-y-3">
+            <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">Select Dataset Context</h4>
             {datasets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No datasets available. Please create a dataset first.</p>
+              <p className="text-xs text-muted-foreground">No datasets available. Please create a dataset first.</p>
             ) : (
               <>
                 <Select
                   value={selectedDatasetId?.toString() || ""}
                   onValueChange={(value) => setSelectedDatasetId(Number(value))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="Select a dataset" />
                   </SelectTrigger>
                   <SelectContent>
                     {datasets.map((dataset) => (
-                      <SelectItem key={dataset.id} value={dataset.id.toString()}>
+                      <SelectItem key={dataset.id} value={dataset.id.toString()} className="text-xs">
                         {dataset.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="flex justify-between">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowDatasetSelector(false)}
-                  >
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowDatasetSelector(false)}>
                     Cancel
                   </Button>
                   <Button 
                     size="sm"
+                    className="h-7 text-xs"
                     onClick={() => {
                       setShowDatasetSelector(false);
-                      if (selectedDatasetId) {
-                        handleGetChartRecommendation();
-                      }
+                      if (selectedDatasetId) handleGetChartRecommendation();
                     }}
                     disabled={!selectedDatasetId}
                   >
-                    Confirm
+                    Confirm & Analyze
                   </Button>
                 </div>
               </>
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={cn("flex items-start space-x-2", {
+                className={cn("flex items-start gap-2.5", {
                   "justify-end": message.role === "user",
                 })}
               >
                 {message.role === "assistant" && (
-                  <Avatar className="h-6 w-6 bg-primary text-primary-foreground">
+                  <Avatar className="h-6 w-6 bg-primary text-primary-foreground border text-[10px] shrink-0">
                     <AvatarFallback>AI</AvatarFallback>
                   </Avatar>
                 )}
                 
                 <div
-                  className={cn("p-2 rounded-lg max-w-[80%]", {
-                    "bg-muted": message.role === "assistant",
-                    "bg-primary/10": message.role === "user",
+                  className={cn("p-3 rounded-xl max-w-[85%] text-xs leading-relaxed space-y-2", {
+                    "bg-muted/70 text-foreground border border-border/50": message.role === "assistant",
+                    "bg-primary text-primary-foreground": message.role === "user",
                   })}
                 >
-                  <p className="text-sm break-words">{message.content}</p>
-                  {message.context?.datasetId && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Dataset: {message.context.datasetId}
-                      {message.context.chartType && ` | Chart: ${message.context.chartType}`}
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+
+                  {/* Generated SQL Display Block */}
+                  {message.generatedSql && (
+                    <div className="rounded-lg bg-zinc-950 p-2.5 text-zinc-100 font-mono text-[11px] border border-zinc-800 space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-zinc-400 border-b border-zinc-800 pb-1">
+                        <span className="flex items-center gap-1 font-sans">
+                          <Code className="h-3 w-3 text-primary" /> Generated SQL
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 text-zinc-400 hover:text-white"
+                          onClick={() => copyToClipboard(message.generatedSql!, message.id)}
+                        >
+                          {copiedSqlId === message.id ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                      </div>
+                      <pre className="overflow-x-auto py-1">{message.generatedSql}</pre>
                     </div>
                   )}
-                  {message.role === "assistant" &&
-                    message.content.includes("Would you like me to help you set up this chart?") &&
-                    !interactedMessageIds.has(message.id) && (
-                      <div className="mt-2 space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCreateChartClick(message)}
-                          disabled={!message.context?.datasetId || !message.context?.chartType}
-                        >
-                          Create this chart
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleNoThanksClick(message)}
-                        >
-                          No, thanks
-                        </Button>
-                      </div>
+
+                  {/* Suggested Chart Badge */}
+                  {message.suggestedChartType && (
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <Badge variant="secondary" className="text-[10px] capitalize">
+                        📊 Chart: {message.suggestedChartType}
+                      </Badge>
+                    </div>
                   )}
-                  {message.role === "assistant" &&
-                    message.content.includes("Would you like me to help you implement any of these improvements?") &&
-                    !interactedSuggestionMessageIds.has(message.id) && (
-                      <div className="mt-2 space-y-1">
-                        {message.content
-                          .split('\n')
-                          .filter(line => line.trim().startsWith('• '))
-                          .map((suggestion, index) => (
-                            <Button
-                              key={index}
-                              size="sm"
-                              variant="outline"
-                              className="w-full text-left justify-start h-auto whitespace-normal"
-                              onClick={() => handleApplySuggestionClick(message, suggestion.trim().substring(2))}
-                            >
-                              Apply: "{suggestion.trim().substring(2)}"
-                            </Button>
-                          ))}
+
+                  {/* Insights Section */}
+                  {message.insights && message.insights.length > 0 && (
+                    <div className="pt-1.5 border-t border-border/40 space-y-1">
+                      <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                        <Lightbulb className="h-3 w-3 text-amber-500" /> Key Insights & Anomalies
                       </div>
+                      <ul className="space-y-0.5 pl-3 list-disc text-muted-foreground text-[11px]">
+                        {message.insights.map((insight, idx) => (
+                          <li key={idx}>{insight}</li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
                 
                 {message.role === "user" && (
-                  <Avatar className="h-6 w-6 bg-secondary text-secondary-foreground">
+                  <Avatar className="h-6 w-6 bg-secondary text-secondary-foreground border text-[10px] shrink-0">
                     <AvatarFallback>U</AvatarFallback>
                   </Avatar>
                 )}
@@ -616,124 +443,73 @@ export default function AICopilot({ onClose, dashboardId, activeDatasetId, activ
         )}
       </CardContent>
       
-      <CardFooter className="p-3 border-t">
+      <CardFooter className="p-3 border-t bg-muted/20 flex flex-col space-y-2">
         {!showDatasetSelector && (
           <>
-            <div className="flex flex-col space-y-2 w-full">
-              {/* AI actions toolbar */}
-              <div className="flex items-center justify-start gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 flex-shrink-0"
-                  title="Get chart recommendation"
-                  onClick={handleGetChartRecommendation}
-                  disabled={aiMutation.isPending || chartRecommendationMutation.isPending || 
-                           chartImprovementsMutation.isPending || kpiSuggestionsMutation.isPending}
-                >
-                  <Sparkles className="h-4 w-4" />
-                </Button>
-                
-                {/* Chart improvements button - only enabled when we have widget context */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 flex-shrink-0"
-                  title="Get chart improvement suggestions"
-                  onClick={handleGetChartImprovements}
-                  disabled={!widgetContext || aiMutation.isPending || chartRecommendationMutation.isPending || 
-                          chartImprovementsMutation.isPending || kpiSuggestionsMutation.isPending}
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 12h4l3 8 4-16 3 8h4"></path>
-                  </svg>
-                </Button>
-                
-                {/* KPI suggestions button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 flex-shrink-0"
-                  title="Get KPI widget suggestions"
-                  onClick={handleGetKPISuggestions}
-                  disabled={aiMutation.isPending || chartRecommendationMutation.isPending || 
-                          chartImprovementsMutation.isPending || kpiSuggestionsMutation.isPending}
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 20V10"></path>
-                    <path d="M18 20V4"></path>
-                    <path d="M6 20v-4"></path>
-                  </svg>
-                </Button>
-
-                {/* Explain this chart button - only enabled when we have widget context */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 flex-shrink-0"
-                  title="Explain this Chart"
-                  onClick={handleExplainChart}
-                  disabled={!widgetContext || aiMutation.isPending || chartRecommendationMutation.isPending || 
-                          chartImprovementsMutation.isPending || kpiSuggestionsMutation.isPending}
-                >
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
-              </div>
+            {/* Quick Actions Toolbar */}
+            <div className="flex items-center justify-start gap-1 w-full overflow-x-auto pb-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-[11px] px-2 rounded-md gap-1 shrink-0"
+                onClick={handleGetChartRecommendation}
+                disabled={aiMutation.isPending || chartRecommendationMutation.isPending}
+              >
+                <Sparkles className="h-3 w-3 text-primary" /> Recommend Chart
+              </Button>
               
-              {/* Message input form */}
-              <form onSubmit={handleSend} className="flex space-x-2 w-full">
-                <Input
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Ask a question..."
-                  disabled={aiMutation.isPending || chartRecommendationMutation.isPending || 
-                          chartImprovementsMutation.isPending || kpiSuggestionsMutation.isPending}
-                  className="flex-1"
-                />
-                <Button 
-                  type="submit" 
-                  size="icon" 
-                  disabled={aiMutation.isPending || chartRecommendationMutation.isPending || 
-                           chartImprovementsMutation.isPending || kpiSuggestionsMutation.isPending || 
-                           !prompt.trim()}
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-[11px] px-2 rounded-md gap-1 shrink-0"
+                onClick={handleGetKPISuggestions}
+                disabled={aiMutation.isPending || kpiSuggestionsMutation.isPending}
+              >
+                <TrendingUp className="h-3 w-3 text-emerald-500" /> Suggest KPIs
+              </Button>
+
+              {widgetContext && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 rounded-md gap-1 shrink-0"
+                    onClick={handleGetChartImprovements}
+                    disabled={aiMutation.isPending || chartImprovementsMutation.isPending}
                   >
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
-                </Button>
-              </form>
+                    ⚡ Optimize Chart
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 rounded-md gap-1 shrink-0"
+                    onClick={handleExplainChart}
+                    disabled={aiMutation.isPending}
+                  >
+                    <HelpCircle className="h-3 w-3 text-blue-500" /> Explain
+                  </Button>
+                </>
+              )}
             </div>
+            
+            {/* Message input */}
+            <form onSubmit={handleSend} className="flex space-x-1.5 w-full">
+              <Input
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Ask SQL query, chart advice, or metrics..."
+                disabled={aiMutation.isPending}
+                className="h-8 text-xs flex-1 rounded-md"
+              />
+              <Button 
+                type="submit" 
+                size="sm" 
+                className="h-8 px-3 text-xs rounded-md"
+                disabled={aiMutation.isPending || !prompt.trim()}
+              >
+                Send
+              </Button>
+            </form>
           </>
         )}
       </CardFooter>

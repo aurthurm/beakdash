@@ -1,100 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-interface KPISuggestion {
-  title: string;
-  description: string;
-  widgetType: 'counter' | 'stat-card' | string; // Allow other widget types
-  config: {
-    valueField: string;
-    aggregation: 'sum' | 'avg' | 'nunique' | 'count' | string; // Allow other aggregations
-    prefix?: string;
-    suffix?: string;
-  };
-}
-
-interface KPISuggestionResponse {
-  kpiSuggestions?: KPISuggestion[];
-  explanation?: string;
-  datasetId: number | string;
-  error?: string;
-  message?: string;
-}
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { datasets, connections } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { generateKPIs } from '@/lib/ai/kpi-generator';
+import { executeQuery } from '@/lib/db/query-engine';
+import { BaseConnectionConfig } from '@/lib/db/connection-pool';
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const userId = parseInt(session.user.id, 10);
     const body = await req.json();
-    const { datasetId } = body;
+    const { datasetId, sampleData: directData, columns: directCols } = body;
 
-    if (datasetId === undefined || datasetId === null) {
-      return NextResponse.json({ error: 'datasetId is missing' }, { status: 400 });
+    let dataToAnalyze: Record<string, any>[] = directData || [];
+    let columnsToAnalyze: { name: string; type: string }[] = directCols || [];
+    let datasetName = 'Dataset';
+
+    if (datasetId) {
+      const parsedDatasetId = parseInt(String(datasetId), 10);
+      const dataset = await db.query.datasets.findFirst({
+        where: and(eq(datasets.id, parsedDatasetId), eq(datasets.userId, userId)),
+      });
+
+      if (!dataset) {
+        return NextResponse.json({ error: 'Dataset not found' }, { status: 404 });
+      }
+
+      datasetName = dataset.name;
+
+      if (dataset.connectionId && dataset.query && (!directData || directData.length === 0)) {
+        const connection = await db.query.connections.findFirst({
+          where: and(eq(connections.id, dataset.connectionId), eq(connections.userId, userId)),
+        });
+
+        if (connection) {
+          const config = (connection.config as BaseConnectionConfig) || {};
+          const queryResult = await executeQuery(
+            connection.type,
+            { ...config, type: connection.type },
+            dataset.query,
+            { readOnly: true, maxRows: 100 }
+          );
+          dataToAnalyze = queryResult.data;
+          columnsToAnalyze = queryResult.columns;
+        }
+      }
     }
 
-    const systemPrompt = "You are an AI business intelligence analyst. Based on the provided dataset columns, suggest 2-3 relevant Key Performance Indicators (KPIs). For each KPI, provide a title, a brief description of what it measures, a suggested widget type (e.g., 'counter', 'stat-card'), and a simple configuration for its calculation (e.g., column to use, aggregation method like sum, average, count unique).";
-
-    let kpiSuggestions: KPISuggestion[] = [];
-    let explanation: string = "";
-
-    // Simulate Data Fetching and AI Interaction
-    if (datasetId === 1) {
-      // Simulated columns: ['category', 'value', 'date']
-      kpiSuggestions = [
-        {
-          title: "Total Value",
-          description: "Sum of all values in the dataset.",
-          widgetType: "counter",
-          config: { valueField: "value", aggregation: "sum" }
-        },
-        {
-          title: "Unique Categories",
-          description: "Count of distinct categories.",
-          widgetType: "stat-card",
-          config: { valueField: "category", aggregation: "nunique" }
-        }
-      ];
-      explanation = "These KPIs provide an overview of the dataset's scale and diversity.";
-    } else if (datasetId === 2) {
-      // Simulated columns: ['product_name', 'sales', 'region']
-      kpiSuggestions = [
-        {
-          title: "Total Sales",
-          description: "Overall sales revenue.",
-          widgetType: "counter",
-          config: { valueField: "sales", aggregation: "sum", prefix: "$" }
-        },
-        {
-          title: "Products Sold",
-          description: "Count of unique products.",
-          widgetType: "stat-card",
-          config: { valueField: "product_name", aggregation: "nunique" }
-        }
-      ];
-      explanation = "Tracking these KPIs can help understand sales performance and product variety.";
-    } else {
-      return NextResponse.json({
-        message: 'Dataset not found or not suitable for KPI suggestions.',
-        datasetId: datasetId,
-      }, { status: 404 });
+    if (columnsToAnalyze.length === 0 && dataToAnalyze.length > 0) {
+      columnsToAnalyze = Object.keys(dataToAnalyze[0]).map((key) => ({
+        name: key,
+        type: typeof dataToAnalyze[0][key] === 'number' ? 'number' : 'string',
+      }));
     }
 
-    // In a real scenario, you would use the systemPrompt and dataset details (column names, types)
-    // to call an AI model. For example:
-    // const datasetInfo = await getDatasetInfo(datasetId); // Function to fetch dataset schema
-    // const aiModelResponse = await callAiModel(systemPrompt, { datasetColumns: datasetInfo.columns });
-    // And then parse aiModelResponse to set kpiSuggestions and explanation.
+    const result = await generateKPIs(columnsToAnalyze, datasetName, dataToAnalyze);
 
-    const response: KPISuggestionResponse = {
-      kpiSuggestions,
-      explanation,
+    return NextResponse.json({
+      success: true,
       datasetId,
-    };
-
-    return NextResponse.json(response);
-
-  } catch (error) {
+      kpiSuggestions: result.kpis,
+      explanation: result.summary,
+      isAIGenerated: result.isAIGenerated,
+    });
+  } catch (error: any) {
     console.error('Error in AI KPI suggestion route:', error);
-    if (error instanceof SyntaxError) { // Handle cases where req.json() fails
-        return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message || 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

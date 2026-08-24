@@ -1,87 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-interface WidgetContext {
-  id: string | number;
-  name?: string;
-  type: 'bar' | 'line' | 'pie' | string; // Allow other string types
-  config?: any; // Current chart configuration
-}
-
-interface ImprovementResponse {
-  suggestions: string[];
-  explanation: string;
-  widgetId: string | number;
-  error?: string;
-}
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { analyzeChartImprovements } from '@/lib/ai/chart-improver';
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const body = await req.json();
-    const widgetContext = body.widgetContext as WidgetContext;
+    const { widgetContext, data = [] } = body;
 
-    if (!widgetContext || !widgetContext.id || !widgetContext.type) {
-      return NextResponse.json({ error: 'widgetContext with id and type is required' }, { status: 400 });
+    if (!widgetContext || !widgetContext.type) {
+      return NextResponse.json(
+        { error: 'widgetContext with type is required' },
+        { status: 400 }
+      );
     }
 
-    const systemPrompt = "You are an AI data visualization expert. A user will provide you with the details of an existing chart (type, configuration). Your task is to analyze this information and provide 2-3 specific, actionable suggestions to improve its clarity, effectiveness, or visual appeal. Also, provide a brief overall explanation for your suggestions.";
+    const result = await analyzeChartImprovements(
+      widgetContext.type,
+      widgetContext.config || {},
+      data
+    );
 
-    let suggestions: string[] = [];
-    let explanation: string = "";
-
-    // Simulate AI Interaction based on Widget Context
-    switch (widgetContext.type.toLowerCase()) {
-      case 'bar':
-        suggestions = [
-          "Consider adding data labels for clarity.",
-          "If you have many categories, try a horizontal bar chart.",
-          "Explore using a different color palette for better visual appeal."
-        ];
-        explanation = "These suggestions can help make your bar chart more readable and engaging.";
-        break;
-      case 'pie':
-        suggestions = [
-          "Ensure slices are ordered logically (e.g., largest to smallest).",
-          "Avoid using pie charts for more than 5-7 categories.",
-          "Consider exploding a slice to highlight a key segment."
-        ];
-        explanation = "Pie charts are best for showing parts of a whole. These tips can improve their effectiveness.";
-        break;
-      case 'line':
-        suggestions = [
-          "Add markers for each data point if the number of points isn't too high.",
-          "Ensure your time axis is clearly labeled and formatted.",
-          "Consider adding a trendline if appropriate."
-        ];
-        explanation = "Line charts are great for trends. These suggestions can enhance their clarity and impact.";
-        break;
-      default:
-        suggestions = [
-          "Ensure your chart has a clear title and axis labels.",
-          "Check if the chosen colors are accessible.",
-          "Make sure the chart type matches the data story you want to tell."
-        ];
-        explanation = "General best practices can always help improve a chart.";
-        break;
-    }
-
-    // In a real scenario, you would use the systemPrompt and widgetContext to call an AI model.
-    // For example:
-    // const aiModelResponse = await callAiModel(systemPrompt, { chartDetails: widgetContext });
-    // And then parse aiModelResponse to set suggestions and explanation.
-
-    const response: ImprovementResponse = {
-      suggestions,
-      explanation,
+    return NextResponse.json({
+      success: true,
       widgetId: widgetContext.id,
-    };
-
-    return NextResponse.json(response);
-
-  } catch (error) {
+      ...result,
+    });
+  } catch (error: any) {
     console.error('Error in AI chart improvement route:', error);
-    if (error instanceof SyntaxError) { // Handle cases where req.json() fails
-        return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message || 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

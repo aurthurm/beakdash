@@ -7,23 +7,36 @@ export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  generatedSql?: string;
+  suggestedChartType?: string;
+  suggestedConfig?: Record<string, any>;
+  insights?: string[];
+  isAIGenerated?: boolean;
   timestamp: Date;
 }
 
 interface UseCopilotOptions {
+  datasetId?: number | null;
+  connectionId?: number | null;
+  widgetContext?: {
+    id?: number | string;
+    name?: string;
+    type?: string;
+    config?: Record<string, any>;
+  } | null;
   onMessageReceived?: (message: Message) => void;
 }
 
 /**
- * Hook for AI Copilot functionality
+ * Hook for AI Copilot functionality with full context awareness
  */
 export function useAICopilot(options: UseCopilotOptions = {}) {
-  const { onMessageReceived } = options;
+  const { datasetId, connectionId, widgetContext, onMessageReceived } = options;
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hello! I'm your AI Copilot. How can I help you with your dashboard today?",
+      content: "Hello! I'm your AI Copilot. Ask me to generate SQL queries, explain your charts, or recommend visualizations.",
       timestamp: new Date(),
     },
   ]);
@@ -44,37 +57,34 @@ export function useAICopilot(options: UseCopilotOptions = {}) {
       
       addMessage(userMessage);
       
-      // Send to API
-      try {
-        const context = messages.slice(-5).map(m => ({
-          role: m.role,
-          content: m.content
-        }));
-        
-        const response = await apiRequest("POST", "/api/ai/copilot", {
-          prompt: content,
-          context,
-        });
-        
-        return {
-          response: response.response || "I couldn't process that request.",
-          timestamp: response.timestamp ? new Date(response.timestamp) : new Date(),
-        };
-      } catch (error) {
-        // For demo purposes, return a fallback response
-        return {
-          response: "I'm currently in demo mode. In the full version, I'd analyze your data and help with chart suggestions, data insights, and dashboard configuration.",
-          timestamp: new Date(),
-        };
-      }
+      // Send to API with full context
+      const context = messages.slice(-6).map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+      
+      const response = await apiRequest("POST", "/api/ai/copilot", {
+        prompt: content,
+        context,
+        datasetId: datasetId || undefined,
+        connectionId: connectionId || undefined,
+        widgetContext: widgetContext || undefined,
+      });
+
+      const json = await response.json();
+      return json;
     },
     onSuccess: (data) => {
-      // Add AI response to messages
       const aiResponse: Message = {
         id: `ai-${Date.now()}`,
         role: "assistant",
-        content: data.response,
-        timestamp: data.timestamp,
+        content: data.message || data.response || "Here are the results for your request.",
+        generatedSql: data.generatedSql,
+        suggestedChartType: data.suggestedChartType,
+        suggestedConfig: data.suggestedConfig,
+        insights: data.insights,
+        isAIGenerated: data.isAIGenerated,
+        timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
       };
       
       addMessage(aiResponse);
@@ -83,18 +93,17 @@ export function useAICopilot(options: UseCopilotOptions = {}) {
         onMessageReceived(aiResponse);
       }
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: `Failed to get AI response: ${error.message}`,
+        title: "Copilot Error",
+        description: error.message || "Failed to get AI response.",
         variant: "destructive",
       });
       
-      // Add error message
       const errorMessage: Message = {
         id: `ai-error-${Date.now()}`,
         role: "assistant",
-        content: "I'm sorry, I encountered an error while processing your request. Please try again later.",
+        content: "I encountered an error while processing your request. Please try again.",
         timestamp: new Date(),
       };
       
@@ -102,52 +111,44 @@ export function useAICopilot(options: UseCopilotOptions = {}) {
     },
   });
 
-  // Generate chart suggestion based on dataset
+  // Generate chart recommendation based on dataset
   const generateChartSuggestion = useMutation({
-    mutationFn: async (datasetId: number) => {
-      try {
-        const response = await apiRequest("POST", "/api/ai/copilot/chart-suggestion", {
-          datasetId,
-        });
-        
-        return response;
-      } catch (error) {
-        // For demo purposes, return a fallback suggestion
-        return {
-          chartType: "bar",
-          config: {
-            xAxis: "month",
-            yAxis: "sales",
-            title: "Monthly Sales Analysis"
-          },
-          reasoning: "Bar charts are effective for comparing discrete categories. I've selected 'month' for the x-axis and 'sales' for the y-axis to show monthly sales performance."
-        };
-      }
+    mutationFn: async (targetDatasetId: number) => {
+      const response = await apiRequest("POST", "/api/ai/chart-recommendation", {
+        datasetId: targetDatasetId,
+      });
+      return await response.json();
     },
     onSuccess: (data) => {
-      // Add chart suggestion to messages
+      const primary = data.primary;
+      const content = primary
+        ? `I recommend a **${primary.chartType}** chart ("${primary.title}"). ${primary.explanation}`
+        : "Here is the recommended chart visualization for your data.";
+
       const message: Message = {
         id: `ai-suggestion-${Date.now()}`,
         role: "assistant",
-        content: `I suggest using a ${data.chartType} chart. ${data.reasoning}`,
+        content,
+        suggestedChartType: primary?.chartType,
+        suggestedConfig: primary?.config,
         timestamp: new Date(),
       };
       
       addMessage(message);
       
       toast({
-        title: "Chart suggestion generated",
-        description: "AI has suggested a chart type for your data.",
+        title: "Chart Recommendation Ready",
+        description: `Suggested ${primary?.chartType || 'chart'} visualization.`,
       });
       
       if (onMessageReceived) {
         onMessageReceived(message);
       }
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: `Failed to generate chart suggestion: ${error.message}`,
+        title: "Recommendation Error",
+        description: error.message || "Failed to generate chart suggestion.",
         variant: "destructive",
       });
     },
@@ -164,13 +165,13 @@ export function useAICopilot(options: UseCopilotOptions = {}) {
       {
         id: "welcome",
         role: "assistant",
-        content: "Hello! I'm your AI Copilot. How can I help you with your dashboard today?",
+        content: "Hello! I'm your AI Copilot. Ask me to generate SQL queries, explain your charts, or recommend visualizations.",
         timestamp: new Date(),
       },
     ]);
   };
 
-  // Toggle the copilot open state
+  // Toggle open / minimized state
   const toggleOpen = () => {
     setIsOpen(prev => !prev);
     if (isMinimized) {
@@ -178,7 +179,6 @@ export function useAICopilot(options: UseCopilotOptions = {}) {
     }
   };
 
-  // Toggle minimized state
   const toggleMinimized = () => {
     setIsMinimized(prev => !prev);
   };

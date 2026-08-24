@@ -1,65 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-interface ChartRecommendationResponse {
-  chartType?: string;
-  explanation?: string;
-  suggestedConfig?: string;
-  datasetId: number | string;
-  error?: string;
-  message?: string;
-}
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { datasets, connections } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { recommendCharts } from '@/lib/ai/chart-recommender';
+import { executeQuery } from '@/lib/db/query-engine';
+import { BaseConnectionConfig } from '@/lib/db/connection-pool';
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const userId = parseInt(session.user.id, 10);
     const body = await req.json();
-    const { datasetId } = body;
+    const { datasetId, sampleData: directData, columns: directCols } = body;
 
-    if (datasetId === undefined || datasetId === null) {
-      return NextResponse.json({ error: 'datasetId is missing' }, { status: 400 });
+    let dataToAnalyze: Record<string, any>[] = directData || [];
+    let columnsToAnalyze: { name: string; type: string }[] = directCols || [];
+    let datasetName = 'Dataset';
+
+    if (datasetId) {
+      const parsedDatasetId = parseInt(String(datasetId), 10);
+      const dataset = await db.query.datasets.findFirst({
+        where: and(eq(datasets.id, parsedDatasetId), eq(datasets.userId, userId)),
+      });
+
+      if (!dataset) {
+        return NextResponse.json({ error: 'Dataset not found' }, { status: 404 });
+      }
+
+      datasetName = dataset.name;
+
+      if (dataset.connectionId && dataset.query && (!directData || directData.length === 0)) {
+        const connection = await db.query.connections.findFirst({
+          where: and(eq(connections.id, dataset.connectionId), eq(connections.userId, userId)),
+        });
+
+        if (connection) {
+          const config = (connection.config as BaseConnectionConfig) || {};
+          const queryResult = await executeQuery(
+            connection.type,
+            { ...config, type: connection.type },
+            dataset.query,
+            { readOnly: true, maxRows: 100 }
+          );
+          dataToAnalyze = queryResult.data;
+          columnsToAnalyze = queryResult.columns;
+        }
+      }
     }
 
-    const systemPrompt = "You are an AI data analyst. Given information about a dataset (column names, data types), your task is to recommend the most appropriate chart type for visualization. Explain your choice clearly and provide a basic configuration mapping dataset columns to chart axes or properties (e.g., x-axis, y-axis, category, value).";
-
-    let response: ChartRecommendationResponse;
-
-    // Simulate Data Fetching and AI Interaction
-    if (datasetId === 1) {
-      // Simulate dataset with columns: ['category', 'value', 'date']
-      // Simulate AI recommendation
-      response = {
-        chartType: 'bar',
-        explanation: 'A bar chart is suitable for comparing values across different categories.',
-        suggestedConfig: JSON.stringify({ xField: 'category', yField: 'value' }),
-        datasetId: datasetId,
-      };
-    } else if (datasetId === 2) {
-      // Simulate dataset with columns: ['product_name', 'sales', 'region']
-      // Simulate AI recommendation
-      response = {
-        chartType: 'pie',
-        explanation: 'A pie chart can effectively show the proportion of sales for different products.',
-        suggestedConfig: JSON.stringify({ categoryField: 'product_name', valueField: 'sales' }),
-        datasetId: datasetId,
-      };
-    } else {
-      return NextResponse.json({
-        message: 'Dataset not found or not suitable for chart recommendation at this time.',
-        datasetId: datasetId,
-      }, { status: 404 });
+    if (columnsToAnalyze.length === 0 && dataToAnalyze.length > 0) {
+      columnsToAnalyze = Object.keys(dataToAnalyze[0]).map((key) => ({
+        name: key,
+        type: typeof dataToAnalyze[0][key] === 'number' ? 'number' : 'string',
+      }));
     }
 
-    // In a real scenario, you would use the systemPrompt and dataset details to call an AI model.
-    // For example:
-    // const aiModelResponse = await callAiModel(systemPrompt, { datasetColumns: simulatedDataset.columns });
-    // And then parse aiModelResponse to set chartType, explanation, suggestedConfig.
+    const recommendation = await recommendCharts(dataToAnalyze, columnsToAnalyze, datasetName);
 
-    return NextResponse.json(response);
-
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      datasetId,
+      ...recommendation,
+    });
+  } catch (error: any) {
     console.error('Error in AI chart recommendation route:', error);
-    if (error instanceof SyntaxError) { // Handle cases where req.json() fails
-        return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message || 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
