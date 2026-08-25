@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { executeQuery } from '@/lib/db/query-engine';
 import { BaseConnectionConfig } from '@/lib/db/connection-pool';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +20,26 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = parseInt(session.user.id, 10);
+    const ip = getClientIp(request.headers);
+
+    // Apply Rate Limiting (60 query executions per minute per user)
+    const rateLimit = checkRateLimit(`sql:exec:${userId}:${ip}`, 60, 60);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Query execution rate limit exceeded. Please wait a moment before executing more queries.',
+          retryAfter: rateLimit.resetSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.resetSeconds),
+            'X-RateLimit-Limit': String(rateLimit.limit),
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+          },
+        }
+      );
+    }
     
     // Get request body
     const body = await request.json();
@@ -71,10 +92,18 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    return NextResponse.json({
-      success: true,
-      ...executionResult,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        ...executionResult,
+      },
+      {
+        headers: {
+          'X-RateLimit-Limit': String(rateLimit.limit),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Query execution error:', error);
     

@@ -7,6 +7,7 @@ import { datasets, connections } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSchemaInfo } from '@/lib/db/schema-info';
 import { BaseConnectionConfig } from '@/lib/db/connection-pool';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +17,28 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = parseInt(session.user.id, 10);
+
+    // Apply Rate Limiting (20 requests per minute per user)
+    const ip = getClientIp(req.headers);
+    const rateLimit = checkRateLimit(`ai:copilot:${userId}:${ip}`, 20, 60);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many AI requests. Please wait a moment before trying again.',
+          retryAfter: rateLimit.resetSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.resetSeconds),
+            'X-RateLimit-Limit': String(rateLimit.limit),
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+          },
+        }
+      );
+    }
+
     const body = await req.json();
     const { prompt, context = [], datasetId, connectionId, chartType, widgetContext } = body;
 
@@ -78,11 +101,19 @@ export async function POST(req: NextRequest) {
 
     const response = await runCopilot(copilotRequest);
 
-    return NextResponse.json({
-      success: true,
-      ...response,
-      timestamp: new Date().toISOString(),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        ...response,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        headers: {
+          'X-RateLimit-Limit': String(rateLimit.limit),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Error in AI Copilot route:', error);
     return NextResponse.json(
