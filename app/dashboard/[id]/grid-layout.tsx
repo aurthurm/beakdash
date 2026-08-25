@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
@@ -289,68 +288,64 @@ export function GridLayoutComponent({ widgets, dashboardId }: GridLayoutProps) {
       console.log('Widget dimensions:', widgetDimensions);
     }, [widgetDimensions]);
     
-    const controls = (<>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowCopilot(true)}
-          className="flex items-center gap-2"
-        >
-          <Sparkles className="h-4 w-4" />
-          AI Copilot
-        </Button>
-
-        {isSaving && (
-          <div className="flex items-center">
-            <div className="animate-spin mr-2 h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-            <span className="text-sm">Saving layout...</span>
-          </div>
-        )}
-
-        {saveMessage && (
-          <div className={`px-4 py-2 rounded-md text-sm ${saveMessage.includes('success') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {saveMessage}
-          </div>
-        )}
-          
-        {isEditMode && !isSaving && (
-          <p className="ml-4 text-sm text-muted-foreground">
-            Drag widgets to reposition or resize them
-          </p>
-        )}
-
-        {!isSaving && (<button 
-          onClick={toggleEditMode}
-          className={`${
-            isEditMode 
-              ? 'bg-amber-500 hover:bg-amber-600 text-white' 
-              : 'bg-muted hover:bg-muted/90 text-foreground'
-          } px-4 py-2 rounded-md text-sm font-medium inline-flex items-center transition-colors`}
-        >
-          {isEditMode && !isSaving ? (
-            <>
-              <SaveOutlined style={{ marginRight: 8 }} />
-              Save Layout
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
-                  <path d="M2 17a5 5 0 0 0 10 0c0-2.5-2.5-5-5-5a5 5 0 0 0-5 5Z" />
-                  <path d="M12 17a5 5 0 0 0 10 0c0-2.5-2.5-5-5-5a5 5 0 0 0-5 5Z" />
-                  <path d="M7 7a5 5 0 1 0-5 5" />
-                  <path d="M17 7a5 5 0 1 0-5 5" />
-                </svg>
-                Edit Layout
-            </div>
-          )}
-        </button>)}
-    </>);
-    
-    
     return (
-      <div className="mb-6">
-        {createPortal(controls, document.getElementById('beakdash-controls')!)}
-        
+      <div className="mb-6 space-y-4">
+        {/* Controls Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-lg bg-card border shadow-xs">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCopilot(true)}
+              className="h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <span>AI Copilot</span>
+            </Button>
+
+            {isEditMode && !isSaving && (
+              <span className="text-xs text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-md font-medium">
+                Editing layout: Drag or resize widget cards
+              </span>
+            )}
+
+            {isSaving && (
+              <div className="flex items-center text-xs text-muted-foreground gap-1.5">
+                <div className="animate-spin h-3.5 w-3.5 border-2 border-primary border-t-transparent rounded-full" />
+                <span>Saving layout...</span>
+              </div>
+            )}
+
+            {saveMessage && (
+              <div className={`px-2.5 py-1 rounded text-xs font-medium ${saveMessage.includes('success') ? 'bg-emerald-500/10 text-emerald-600' : 'bg-destructive/10 text-destructive'}`}>
+                {saveMessage}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={isEditMode ? 'default' : 'outline'}
+              onClick={toggleEditMode}
+              disabled={isSaving}
+              className={`h-8 text-xs gap-1.5 ${isEditMode ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+            >
+              {isEditMode ? (
+                <>
+                  <SaveOutlined />
+                  <span>Save Layout</span>
+                </>
+              ) : (
+                <>
+                  <EditOutlined />
+                  <span>Edit Layout</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
         <ResponsiveGridLayout
           className={`layout ${isEditMode ? 'edit-mode' : ''}`}
           layouts={layouts}

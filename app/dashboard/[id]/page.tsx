@@ -7,8 +7,9 @@ import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { DashboardViewClient } from './client-page';
 import Link from 'next/link';
-import { GearIcon } from '@radix-ui/react-icons';
-import { Header } from '@/components/layout/header';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Settings, Share2, Layers, Calendar, ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,10 +17,9 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const dashboardId = parseInt(id);
+  const dashboardId = parseInt(id, 10);
   const dashboard = await db.query.dashboards.findFirst({
     where: eq(dashboards.id, dashboardId),
   });
@@ -31,16 +31,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
-    title: `BeakDash - ${dashboard.name}`,
-    description: dashboard.description || 'Dashboard view',
+    title: `${dashboard.name} - BeakDash`,
+    description: dashboard.description || 'Interactive analytics dashboard',
   };
 }
 
 export default async function DashboardViewPage({ params }: Props) {
   const { id } = await params;
-  const dashboardId = parseInt(id);
-  
-  // Fetch the dashboard from the database
+  const dashboardId = parseInt(id, 10);
+
   const dashboard = await db.query.dashboards.findFirst({
     where: eq(dashboards.id, dashboardId),
     with: {
@@ -48,65 +47,58 @@ export default async function DashboardViewPage({ params }: Props) {
     },
   });
 
-  // If dashboard doesn't exist, show 404
   if (!dashboard) {
     notFound();
   }
 
   return (
     <AppLayout>
-      <div className="mb-6">
-        {/* Dashboard header */}
-        <Header title={dashboard.name} description={dashboard.description || ''}>
-          <Link
-            href={`/dashboard/${dashboardId}/edit`}
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md text-sm font-medium"
-          >
-            <GearIcon className="w-4 h-4" />
+      <div className="container max-w-7xl px-4 py-6">
+        {/* Breadcrumb & Navigation */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+          <Link href="/dashboard" className="hover:text-foreground flex items-center gap-1 transition-colors">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Dashboards</span>
           </Link>
-          <Link
-            href={`/dashboard/${dashboardId}/add-widget`}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Add Widget
-          </Link>
-        </Header>
-
-        {/* Dashboard widgets - Client component */}
-        <div className="p-4">
-          <DashboardViewClient dashboard={dashboard as any} />
+          <span>/</span>
+          <span className="text-foreground font-medium truncate max-w-xs">{dashboard.name}</span>
         </div>
 
-        {/* Dashboard info */}
-        <div className="px-4 mt-10 border-t pt-6">
-          <h2 className="text-lg font-medium mb-4">Dashboard Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="border rounded-md p-4">
-              <h3 className="text-sm text-muted-foreground mb-1">Space</h3>
-              <p className="font-medium">{dashboard.space?.name || "Default Space"}</p>
+        {/* Dashboard Title & Actions Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-6 border-b">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-bold tracking-tight">{dashboard.name}</h1>
+              {dashboard.isActive && (
+                <Badge variant="secondary" className="text-[10px] text-emerald-600 bg-emerald-500/10">
+                  Active
+                </Badge>
+              )}
             </div>
-            
-            <div className="border rounded-md p-4">
-              <h3 className="text-sm text-muted-foreground mb-1">Created</h3>
-              <p className="font-medium">{dashboard.createdAt 
-                ? new Date(dashboard.createdAt).toLocaleDateString() 
-                : "Unknown"}</p>
-            </div>
-            
-            <div className="border rounded-md p-4">
-              <h3 className="text-sm text-muted-foreground mb-1">Last Updated</h3>
-              <p className="font-medium">{dashboard.updatedAt 
-                ? new Date(dashboard.updatedAt).toLocaleDateString()
-                : "Not updated yet"}</p>
-            </div>
-            
-            <div className="border rounded-md p-4">
-              <h3 className="text-sm text-muted-foreground mb-1">Status</h3>
-              <p className="font-medium">{dashboard.isActive ? "Active" : "Inactive"}</p>
-            </div>
+            <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
+              {dashboard.description || 'Interactive metrics, time-series trends, and operational charts.'}
+            </p>
+          </div>
 
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" asChild className="h-8 text-xs gap-1.5">
+              <Link href={`/embed/${dashboardId}`} target="_blank">
+                <Share2 className="h-3.5 w-3.5" />
+                <span>Embed View</span>
+              </Link>
+            </Button>
+
+            <Button asChild size="sm" className="h-8 text-xs gap-1.5 shadow-sm">
+              <Link href={`/dashboard/${dashboardId}/add-widget`}>
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add Widget</span>
+              </Link>
+            </Button>
           </div>
         </div>
+
+        {/* Dashboard Widgets Grid */}
+        <DashboardViewClient dashboard={dashboard as any} />
       </div>
     </AppLayout>
   );
