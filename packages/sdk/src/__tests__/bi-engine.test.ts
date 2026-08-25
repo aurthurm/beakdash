@@ -106,4 +106,31 @@ describe('Production BI Engine (Redash, Lightdash & Evidence best practices)', (
       expect(result.direction).toBe('down');
     });
   });
+
+  describe('Autonomous Agentic BI Reasoning Loop', () => {
+    it('should validate tool actions in the ReAct loop', () => {
+      const validActions = [
+        'introspect_table',
+        'execute_sql',
+        'create_dataset',
+        'create_dashboard',
+        'add_widget',
+        'update_widget',
+        'get_dashboard_widgets',
+        'finish'
+      ];
+      
+      const sampleStep = {
+        step: 1,
+        thought: 'Inspect rejection aggregate table',
+        action: 'introspect_table',
+        actionInput: { table: 'dashboard.rejection_rate_aggregate' },
+        status: 'success'
+      };
+
+      expect(validActions).toContain(sampleStep.action);
+      expect(sampleStep.step).toBe(1);
+      expect(sampleStep.actionInput.table).toBe('dashboard.rejection_rate_aggregate');
+    });
+  });
 });

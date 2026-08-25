@@ -1,38 +1,69 @@
-import { useState, useRef, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { apiRequest } from "@/lib/queryClient";
-import { MessageSquare, X, Minimize, Sparkles, HelpCircle, Code, Copy, Check, TrendingUp, Lightbulb } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Dataset } from "@/lib/db/schema";
-import { AIProcessingStatus } from "@/components/ai/ai-processing-status";
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Sparkles, 
+  X, 
+  Bot, 
+  User, 
+  Send, 
+  CheckCircle2, 
+  AlertCircle, 
+  Layers, 
+  Database, 
+  Play, 
+  Copy, 
+  Check, 
+  RefreshCw, 
+  ChevronRight, 
+  ChevronDown,
+  ExternalLink,
+  Code2,
+  Wand2,
+  Brain,
+  History
+} from 'lucide-react';
+import { useToast } from '@/lib/hooks/use-toast';
+import Link from 'next/link';
+
+interface AgentStepTrace {
+  step: number;
+  thought: string;
+  action: string;
+  actionInput?: Record<string, any>;
+  observation?: string;
+  status: 'running' | 'success' | 'error';
+}
+
+interface AgenticResponse {
+  success: boolean;
+  message: string;
+  dashboardId?: number;
+  dashboardName?: string;
+  createdDatasets: { id: number; name: string }[];
+  createdWidgets: { id: number; name: string; type: string; chartType?: string }[];
+  updatedWidgets: { id: number; name: string }[];
+  thoughtTrace: AgentStepTrace[];
+  iterations: number;
+}
 
 interface Message {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   generatedSql?: string;
   suggestedChartType?: string;
   suggestedConfig?: Record<string, any>;
   insights?: string[];
-  isAIGenerated?: boolean;
+  agentResult?: AgenticResponse;
   timestamp: Date;
-  context?: {
-    datasetId?: number;
-    chartType?: string;
-  };
-}
-
-interface WidgetContextType {
-  id: number;
-  name: string;
-  type: string;
-  config: any;
 }
 
 interface AICopilotProps {
@@ -40,479 +71,388 @@ interface AICopilotProps {
   dashboardId?: number;
   activeDatasetId?: number;
   activeChartType?: string;
-  widgetContext?: WidgetContextType;
+  widgetContext?: {
+    id: number;
+    name: string;
+    type: string;
+    config: any;
+  };
 }
 
-export default function AICopilot({ onClose, dashboardId, activeDatasetId, activeChartType, widgetContext }: AICopilotProps) {
-  const [prompt, setPrompt] = useState("");
-  const [selectedDatasetId, setSelectedDatasetId] = useState<number | undefined>(activeDatasetId);
-  const [selectedChartType, setSelectedChartType] = useState<string | undefined>(activeChartType);
-  const [showDatasetSelector, setShowDatasetSelector] = useState(false);
-  const [copiedSqlId, setCopiedSqlId] = useState<string | null>(null);
-  const [datasetKey] = useState<string>(`ai-copilot-${Date.now()}`);
+export default function AICopilot({
+  onClose,
+  dashboardId,
+  activeDatasetId,
+  activeChartType,
+  widgetContext,
+}: AICopilotProps) {
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'agent' | 'copilot'>('agent');
+  const [prompt, setPrompt] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [openStep, setOpenStep] = useState<number | null>(null);
+
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: "welcome",
-      role: "assistant",
-      content: widgetContext 
-        ? `Hello! I'm your AI Copilot. I see you're working with the "${widgetContext.name}" ${widgetContext.type} widget. Ask me to explain it, optimize the queries, or suggest new metrics.`
-        : "Hello! I'm your AI Copilot. Ask me to generate SQL queries from natural language, recommend charts, or discover anomalies.",
+      id: 'welcome',
+      role: 'assistant',
+      content: dashboardId
+        ? `I am your Autonomous BI Agent. I am connected to Dashboard #${dashboardId}. You can ask me to create complete dashboards, add new charts, modify existing widgets, or write SQL queries.`
+        : `I am your Autonomous BI Agent. Give me any data analysis goal (e.g. "Build a Viral Load Suppression Dashboard") and I will introspect tables, write queries, create datasets, and build the charts automatically.`,
       timestamp: new Date(),
-      context: widgetContext ? {
-        datasetId: activeDatasetId,
-        chartType: widgetContext.type,
-      } : undefined
     },
   ]);
-  const [isMinimized, setIsMinimized] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch available datasets
-  const { data: datasets = [] } = useQuery<Dataset[]>({
-    queryKey: ['/api/datasets'],
-    enabled: showDatasetSelector,
-  });
-
-  // Auto-scroll to bottom of messages
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedSqlId(id);
-    setTimeout(() => setCopiedSqlId(null), 2000);
+    setCopiedId(id);
+    toast({ title: 'Copied', description: 'SQL query copied to clipboard.' });
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Send message to AI Copilot
-  const aiMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const response = await apiRequest("POST", "/api/ai/copilot", {
-        prompt: message,
-        context: messages.slice(-5).map(m => ({ role: m.role, content: m.content })),
-        datasetId: selectedDatasetId,
-        chartType: selectedChartType,
-        widgetContext: widgetContext ? {
-          id: widgetContext.id,
-          name: widgetContext.name,
-          type: widgetContext.type,
-          config: widgetContext.config
-        } : undefined,
+  // 1. Run Autonomous Agent Mutation
+  const agentMutation = useMutation({
+    mutationFn: async (goal: string) => {
+      const response = await fetch('/api/ai/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goal,
+          dashboardId,
+          conversationHistory: messages.slice(-4).map(m => ({ role: m.role, content: m.content })),
+        }),
       });
 
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      const aiResponse: Message = {
-        id: `ai-${Date.now()}`,
-        role: "assistant",
-        content: data.message || data.response || "Here are the results for your request.",
-        generatedSql: data.generatedSql,
-        suggestedChartType: data.suggestedChartType,
-        suggestedConfig: data.suggestedConfig,
-        insights: data.insights,
-        isAIGenerated: data.isAIGenerated,
-        timestamp: new Date(data.timestamp || new Date()),
-        context: {
-          datasetId: selectedDatasetId,
-          chartType: selectedChartType,
-        }
-      };
-      setMessages(prev => [...prev, aiResponse]);
-    },
-  });
-
-  // Chart improvements mutation
-  const chartImprovementsMutation = useMutation({
-    mutationFn: async () => {
-      if (!widgetContext) throw new Error("Widget context required");
-      const response = await apiRequest("POST", "/api/ai/chart-improvements", { 
-        widgetContext: {
-          id: widgetContext.id,
-          name: widgetContext.name,
-          type: widgetContext.type,
-          config: widgetContext.config
-        } 
-      });
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      const suggestionsFormatted = (data.suggestions || []).map((s: string) => `• ${s}`).join('\n');
-      const improvementsMessage: Message = {
-        id: `improvements-${Date.now()}`,
-        role: "assistant",
-        content: `I've analyzed your "${widgetContext?.name}" widget and recommend the following visual improvements:\n\n${suggestionsFormatted}\n\n${data.explanation || ''}`,
-        insights: data.anomalies?.map((a: any) => a.description),
-        isAIGenerated: data.isAIGenerated,
-        timestamp: new Date(),
-        context: widgetContext ? { chartType: widgetContext.type } : undefined
-      };
-      setMessages(prev => [...prev, improvementsMessage]);
-    },
-  });
-
-  // KPI suggestions mutation
-  const kpiSuggestionsMutation = useMutation({
-    mutationFn: async (datasetId: number) => {
-      const response = await apiRequest("POST", "/api/ai/kpi-suggestions", { datasetId });
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      const suggestionsFormatted = (data.kpiSuggestions || []).map((kpi: any) => 
-        `• **${kpi.title}** (${kpi.widgetType}): ${kpi.description}`
-      ).join('\n');
-      
-      const kpiMessage: Message = {
-        id: `kpi-suggestions-${Date.now()}`,
-        role: "assistant",
-        content: `Here are the suggested high-impact KPI metrics for your dataset:\n\n${suggestionsFormatted}\n\n${data.explanation || ''}`,
-        isAIGenerated: data.isAIGenerated,
-        timestamp: new Date(),
-        context: { datasetId: data.datasetId }
-      };
-      setMessages(prev => [...prev, kpiMessage]);
-    },
-  });
-
-  // Chart recommendation mutation
-  const chartRecommendationMutation = useMutation({
-    mutationFn: async (datasetId: number) => {
-      const response = await apiRequest("POST", "/api/ai/chart-recommendation", { datasetId });
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      const primary = data.primary;
-      const recommendationMessage: Message = {
-        id: `recommendation-${Date.now()}`,
-        role: "assistant",
-        content: primary
-          ? `I've analyzed your dataset structure and recommend a **${primary.chartType}** chart ("${primary.title}").\n\n${primary.explanation}`
-          : "Recommended visualization ready.",
-        suggestedChartType: primary?.chartType,
-        suggestedConfig: primary?.config,
-        isAIGenerated: data.isAIGenerated,
-        timestamp: new Date(),
-        context: {
-          datasetId: selectedDatasetId,
-          chartType: primary?.chartType,
-        }
-      };
-      setMessages(prev => [...prev, recommendationMessage]);
-      if (primary?.chartType) {
-        setSelectedChartType(primary.chartType);
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to run agent.');
       }
+
+      return response.json() as Promise<AgenticResponse>;
+    },
+    onSuccess: (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: data.message,
+          agentResult: data,
+          timestamp: new Date(),
+        },
+      ]);
+      setPrompt('');
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Agent Error',
+        description: err.message,
+        variant: 'destructive',
+      });
     },
   });
 
-  const handleSend = (e: React.FormEvent) => {
+  // 2. Run Standard Copilot Mutation
+  const copilotMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const response = await fetch('/api/ai/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: text,
+          context: messages.slice(-4).map(m => ({ role: m.role, content: m.content })),
+          datasetId: activeDatasetId,
+          chartType: activeChartType,
+          widgetContext,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to run copilot.');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: data.message,
+          generatedSql: data.generatedSql,
+          suggestedChartType: data.suggestedChartType,
+          suggestedConfig: data.suggestedConfig,
+          insights: data.insights,
+          timestamp: new Date(),
+        },
+      ]);
+      setPrompt('');
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Copilot Error',
+        description: err.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || agentMutation.isPending || copilotMutation.isPending) return;
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
-      role: "user",
+      role: 'user',
       content: prompt,
       timestamp: new Date(),
-      context: {
-        datasetId: selectedDatasetId,
-        chartType: selectedChartType,
-      }
     };
-    setMessages(prev => [...prev, userMessage]);
-    aiMutation.mutate(prompt);
-    setPrompt("");
-  };
 
-  const handleExplainChart = () => {
-    if (!widgetContext) return;
-    const { type, name, config } = widgetContext;
-    const promptText = `Please explain my current ${type} chart named '${name}'. Configuration: ${JSON.stringify(config)}. What insights can we derive from it?`;
-    
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: promptText,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMessage]);
-    aiMutation.mutate(promptText);
-  };
+    setMessages((prev) => [...prev, userMessage]);
 
-  const handleGetChartRecommendation = () => {
-    if (!selectedDatasetId) {
-      setShowDatasetSelector(true);
-      return;
+    if (activeTab === 'agent') {
+      agentMutation.mutate(prompt);
+    } else {
+      copilotMutation.mutate(prompt);
     }
-    const promptMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: `Analyze dataset #${selectedDatasetId} and recommend the best chart visualization.`,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, promptMessage]);
-    chartRecommendationMutation.mutate(selectedDatasetId);
   };
 
-  const handleGetChartImprovements = () => {
-    if (!widgetContext) return;
-    const promptMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: `Analyze my "${widgetContext.name}" widget for improvements and anomalies.`,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, promptMessage]);
-    chartImprovementsMutation.mutate();
-  };
-
-  const handleGetKPISuggestions = () => {
-    if (!selectedDatasetId) {
-      setShowDatasetSelector(true);
-      return;
-    }
-    const promptMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: `Suggest executive KPI metrics for dataset #${selectedDatasetId}.`,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, promptMessage]);
-    kpiSuggestionsMutation.mutate(selectedDatasetId);
-  };
-
-  if (isMinimized) {
-    return (
-      <Button
-        className="fixed bottom-4 right-4 z-40 rounded-full w-12 h-12 p-0 flex items-center justify-center shadow-xl bg-primary text-primary-foreground hover:scale-105 transition-all"
-        onClick={() => setIsMinimized(false)}
-      >
-        <Sparkles className="h-5 w-5" />
-      </Button>
-    );
-  }
+  const isLoading = agentMutation.isPending || copilotMutation.isPending;
 
   return (
-    <Card className="fixed bottom-4 right-6 z-40 w-[26rem] sm:w-[30rem] h-[38rem] flex flex-col shadow-2xl border border-border/80 bg-background/95 backdrop-blur-md rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
-      <CardHeader className="p-3.5 border-b flex flex-row items-center justify-between space-y-0 bg-muted/30">
+    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[540px] bg-background border-l shadow-2xl flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b flex items-center justify-between bg-muted/30">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-            <Sparkles className="h-4 w-4" />
+          <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+            <Brain className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="font-semibold text-sm leading-tight flex items-center gap-1.5">
-              BeakDash Copilot
-              <Badge variant="outline" className="text-[10px] px-1 py-0 border-primary/30 text-primary font-normal">
-                AI Assistant
+            <h2 className="text-sm font-semibold flex items-center gap-1.5">
+              <span>BeakDash AI Studio</span>
+              <Badge variant="secondary" className="text-[10px] font-mono bg-primary/10 text-primary">
+                Agentic Loop
               </Badge>
-            </h3>
-            <p className="text-[11px] text-muted-foreground">Natural Language BI & Query Intelligence</p>
+            </h2>
+            <p className="text-[11px] text-muted-foreground">
+              {dashboardId ? `Target: Dashboard #${dashboardId}` : 'Multi-step reasoning & auto-build'}
+            </p>
           </div>
         </div>
-        <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setIsMinimized(true)}>
-            <Minimize className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="p-3.5 flex-1 overflow-y-auto space-y-3.5">
-        <AIProcessingStatus datasetKey={datasetKey} />
-        
-        {showDatasetSelector ? (
-          <div className="p-3 rounded-lg border bg-card space-y-3">
-            <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">Select Dataset Context</h4>
-            {datasets.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No datasets available. Please create a dataset first.</p>
-            ) : (
-              <>
-                <Select
-                  value={selectedDatasetId?.toString() || ""}
-                  onValueChange={(value) => setSelectedDatasetId(Number(value))}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Select a dataset" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {datasets.map((dataset) => (
-                      <SelectItem key={dataset.id} value={dataset.id.toString()} className="text-xs">
-                        {dataset.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowDatasetSelector(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => {
-                      setShowDatasetSelector(false);
-                      if (selectedDatasetId) handleGetChartRecommendation();
-                    }}
-                    disabled={!selectedDatasetId}
-                  >
-                    Confirm & Analyze
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3.5">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn("flex items-start gap-2.5", {
-                  "justify-end": message.role === "user",
-                })}
-              >
-                {message.role === "assistant" && (
-                  <Avatar className="h-6 w-6 bg-primary text-primary-foreground border text-[10px] shrink-0">
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                )}
-                
-                <div
-                  className={cn("p-3 rounded-xl max-w-[85%] text-xs leading-relaxed space-y-2", {
-                    "bg-muted/70 text-foreground border border-border/50": message.role === "assistant",
-                    "bg-primary text-primary-foreground": message.role === "user",
-                  })}
-                >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
 
-                  {/* Generated SQL Display Block */}
-                  {message.generatedSql && (
-                    <div className="rounded-lg bg-zinc-950 p-2.5 text-zinc-100 font-mono text-[11px] border border-zinc-800 space-y-1.5">
-                      <div className="flex items-center justify-between text-[10px] text-zinc-400 border-b border-zinc-800 pb-1">
-                        <span className="flex items-center gap-1 font-sans">
-                          <Code className="h-3 w-3 text-primary" /> Generated SQL
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 text-zinc-400 hover:text-white"
-                          onClick={() => copyToClipboard(message.generatedSql!, message.id)}
-                        >
-                          {copiedSqlId === message.id ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                        </Button>
-                      </div>
-                      <pre className="overflow-x-auto py-1">{message.generatedSql}</pre>
-                    </div>
-                  )}
+        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
 
-                  {/* Suggested Chart Badge */}
-                  {message.suggestedChartType && (
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <Badge variant="secondary" className="text-[10px] capitalize">
-                        📊 Chart: {message.suggestedChartType}
-                      </Badge>
-                    </div>
-                  )}
+      {/* Tabs */}
+      <div className="px-4 pt-2 border-b bg-muted/10">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+          <TabsList className="grid grid-cols-2 h-8">
+            <TabsTrigger value="agent" className="text-xs gap-1.5">
+              <Wand2 className="h-3 w-3" />
+              <span>Autonomous Agent</span>
+            </TabsTrigger>
+            <TabsTrigger value="copilot" className="text-xs gap-1.5">
+              <Sparkles className="h-3 w-3" />
+              <span>SQL Copilot</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-                  {/* Insights Section */}
-                  {message.insights && message.insights.length > 0 && (
-                    <div className="pt-1.5 border-t border-border/40 space-y-1">
-                      <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                        <Lightbulb className="h-3 w-3 text-amber-500" /> Key Insights & Anomalies
-                      </div>
-                      <ul className="space-y-0.5 pl-3 list-disc text-muted-foreground text-[11px]">
-                        {message.insights.map((insight, idx) => (
-                          <li key={idx}>{insight}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-                
-                {message.role === "user" && (
-                  <Avatar className="h-6 w-6 bg-secondary text-secondary-foreground border text-[10px] shrink-0">
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                )}
+      {/* Messages Stream */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex gap-3 text-xs ${
+              msg.role === 'user' ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            {msg.role === 'assistant' && (
+              <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                <Bot className="h-3.5 w-3.5" />
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </CardContent>
-      
-      <CardFooter className="p-3 border-t bg-muted/20 flex flex-col space-y-2">
-        {!showDatasetSelector && (
-          <>
-            {/* Quick Actions Toolbar */}
-            <div className="flex items-center justify-start gap-1 w-full overflow-x-auto pb-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 text-[11px] px-2 rounded-md gap-1 shrink-0"
-                onClick={handleGetChartRecommendation}
-                disabled={aiMutation.isPending || chartRecommendationMutation.isPending}
-              >
-                <Sparkles className="h-3 w-3 text-primary" /> Recommend Chart
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 text-[11px] px-2 rounded-md gap-1 shrink-0"
-                onClick={handleGetKPISuggestions}
-                disabled={aiMutation.isPending || kpiSuggestionsMutation.isPending}
-              >
-                <TrendingUp className="h-3 w-3 text-emerald-500" /> Suggest KPIs
-              </Button>
+            )}
 
-              {widgetContext && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-[11px] px-2 rounded-md gap-1 shrink-0"
-                    onClick={handleGetChartImprovements}
-                    disabled={aiMutation.isPending || chartImprovementsMutation.isPending}
-                  >
-                    ⚡ Optimize Chart
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-[11px] px-2 rounded-md gap-1 shrink-0"
-                    onClick={handleExplainChart}
-                    disabled={aiMutation.isPending}
-                  >
-                    <HelpCircle className="h-3 w-3 text-blue-500" /> Explain
-                  </Button>
-                </>
+            <div
+              className={`max-w-[85%] rounded-xl p-3.5 space-y-3 ${
+                msg.role === 'user'
+                  ? 'bg-primary text-primary-foreground font-medium'
+                  : 'bg-muted/40 border text-foreground'
+              }`}
+            >
+              <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+
+              {/* Agentic Reasoning Trace Accordion */}
+              {msg.agentResult?.thoughtTrace && msg.agentResult.thoughtTrace.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-border/60">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Brain className="h-3 w-3 text-primary" />
+                      Thought & Reasoning Trace ({msg.agentResult.thoughtTrace.length} steps)
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {msg.agentResult.thoughtTrace.map((step) => (
+                      <div key={step.step} className="border rounded-md bg-background/60 p-2 text-[11px] space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-primary uppercase font-mono text-[10px]">
+                            Step {step.step}: {step.action.replace('_', ' ')}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">{step.status}</span>
+                        </div>
+                        <p className="text-muted-foreground italic text-[10.5px]">"{step.thought}"</p>
+                        {step.observation && (
+                          <div className="text-[10px] bg-muted/60 p-1 rounded font-mono text-muted-foreground line-clamp-2">
+                            Observation: {step.observation}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Created Artifact Badges */}
+                  {msg.agentResult.dashboardId && (
+                    <div className="pt-2 flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-emerald-600">
+                        ✨ Dashboard Built Successfully
+                      </span>
+                      <Button asChild size="sm" variant="outline" className="h-6 text-[10px] gap-1">
+                        <Link href={`/dashboard/${msg.agentResult.dashboardId}`}>
+                          <span>View Dashboard #{msg.agentResult.dashboardId}</span>
+                          <ExternalLink className="h-2.5 w-2.5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Generated SQL snippet */}
+              {msg.generatedSql && (
+                <div className="rounded-lg bg-background p-2.5 border space-y-2 mt-2">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                    <span className="flex items-center gap-1">
+                      <Code2 className="h-3 w-3" />
+                      Generated SQL
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 text-[10px] px-1.5 gap-1"
+                      onClick={() => copyToClipboard(msg.generatedSql!, msg.id)}
+                    >
+                      {copiedId === msg.id ? (
+                        <Check className="h-2.5 w-2.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="h-2.5 w-2.5" />
+                      )}
+                      <span>Copy</span>
+                    </Button>
+                  </div>
+                  <pre className="text-[10.5px] font-mono overflow-x-auto text-primary whitespace-pre-wrap">
+                    {msg.generatedSql}
+                  </pre>
+                </div>
+              )}
+
+              {/* Insights */}
+              {msg.insights && msg.insights.length > 0 && (
+                <ul className="list-disc list-inside text-[11px] text-muted-foreground space-y-1 pt-1">
+                  {msg.insights.map((ins, i) => (
+                    <li key={i}>{ins}</li>
+                  ))}
+                </ul>
               )}
             </div>
-            
-            {/* Message input */}
-            <form onSubmit={handleSend} className="flex space-x-1.5 w-full">
-              <Input
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ask SQL query, chart advice, or metrics..."
-                disabled={aiMutation.isPending}
-                className="h-8 text-xs flex-1 rounded-md"
-              />
-              <Button 
-                type="submit" 
-                size="sm" 
-                className="h-8 px-3 text-xs rounded-md"
-                disabled={aiMutation.isPending || !prompt.trim()}
-              >
-                Send
-              </Button>
-            </form>
-          </>
+
+            {msg.role === 'user' && (
+              <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        ))}
+
+        {isLoading && (
+          <div className="flex gap-3 text-xs items-start">
+            <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 animate-pulse">
+              <Bot className="h-3.5 w-3.5" />
+            </div>
+            <div className="bg-muted/40 border rounded-xl p-3 space-y-1.5 max-w-[85%] animate-pulse">
+              <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                <span>Autonomous Agent Reasoning & Executing Tools...</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Introspecting schemas, validating queries, and building visual widgets in loops.
+              </p>
+            </div>
+          </div>
         )}
-      </CardFooter>
-    </Card>
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Suggested Quick Prompts */}
+      <div className="px-4 py-2 border-t bg-muted/20 flex items-center gap-1.5 overflow-x-auto">
+        <span className="text-[10px] text-muted-foreground shrink-0">Try:</span>
+        <button
+          type="button"
+          onClick={() => setPrompt('Build a Viral Load Suppression and CD4 monitoring dashboard')}
+          className="text-[10.5px] px-2 py-0.5 rounded-full bg-background border hover:border-primary shrink-0 transition-colors"
+        >
+          Viral Load Dashboard
+        </button>
+        <button
+          type="button"
+          onClick={() => setPrompt('Add a stat card showing overall average rejection rate')}
+          className="text-[10.5px] px-2 py-0.5 rounded-full bg-background border hover:border-primary shrink-0 transition-colors"
+        >
+          Add Stat Card
+        </button>
+        <button
+          type="button"
+          onClick={() => setPrompt('Show me the top 5 laboratories by test throughput in 2023')}
+          className="text-[10.5px] px-2 py-0.5 rounded-full bg-background border hover:border-primary shrink-0 transition-colors"
+        >
+          Top 5 Labs SQL
+        </button>
+      </div>
+
+      {/* Input Form */}
+      <form onSubmit={handleSubmit} className="p-3 border-t bg-background flex items-center gap-2">
+        <Input
+          placeholder={
+            activeTab === 'agent'
+              ? 'Tell the AI agent what to build or change...'
+              : 'Ask a data question or request SQL...'
+          }
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          disabled={isLoading}
+          className="h-9 text-xs"
+        />
+        <Button type="submit" size="sm" disabled={isLoading || !prompt.trim()} className="h-9 gap-1 shrink-0">
+          {isLoading ? (
+            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Send className="h-3.5 w-3.5" />
+          )}
+          <span>Run</span>
+        </Button>
+      </form>
+    </div>
   );
 }
