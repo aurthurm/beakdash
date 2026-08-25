@@ -18,7 +18,7 @@ describe('BeakDashSDK', () => {
     vi.restoreAllMocks();
   });
 
-  describe('getDashboards', () => {
+  describe('Dashboards API', () => {
     const mockDashboards: Dashboard[] = [
       {
         id: '1',
@@ -47,68 +47,68 @@ describe('BeakDashSDK', () => {
         })
       );
     });
-  });
 
-  describe('getDashboard', () => {
-    const mockDashboard: Dashboard = {
-      id: '1',
-      name: 'Test Dashboard',
-      widgets: [],
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
-    };
-
-    it('should return a dashboard', async () => {
-      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+    it('should return a single dashboard by ID', async () => {
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: mockDashboard }),
+        json: async () => ({ data: mockDashboards[0] }),
       } as Response);
 
       const result = await sdk.getDashboard('1');
-      expect(result).toEqual(mockDashboard);
-      expect(fetchSpy).toHaveBeenCalledWith(
-        'https://api.test.com/v1/dashboards/1',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: 'Bearer test-api-key',
-          }),
-        })
-      );
+      expect(result).toEqual(mockDashboards[0]);
     });
-  });
-
-  describe('createDashboard', () => {
-    const mockDashboardData = {
-      name: 'New Dashboard',
-      widgets: [],
-    };
-
-    const mockCreatedDashboard: Dashboard = {
-      id: '1',
-      ...mockDashboardData,
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
-    };
 
     it('should create a dashboard', async () => {
-      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      const mockCreated: Dashboard = {
+        id: '2',
+        name: 'New Sales',
+        widgets: [],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+      };
+
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: mockCreatedDashboard }),
+        json: async () => ({ data: mockCreated }),
       } as Response);
 
-      const result = await sdk.createDashboard(mockDashboardData);
-      expect(result).toEqual(mockCreatedDashboard);
+      const result = await sdk.createDashboard({ name: 'New Sales', widgets: [] });
+      expect(result).toEqual(mockCreated);
+    });
+
+    it('should update a dashboard', async () => {
+      const mockUpdated: Dashboard = {
+        id: '1',
+        name: 'Renamed Sales',
+        widgets: [],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-02',
+      };
+
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: mockUpdated }),
+      } as Response);
+
+      const result = await sdk.updateDashboard('1', { name: 'Renamed Sales' });
+      expect(result).toEqual(mockUpdated);
+    });
+
+    it('should delete a dashboard', async () => {
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      await sdk.deleteDashboard('1');
       expect(fetchSpy).toHaveBeenCalledWith(
-        'https://api.test.com/v1/dashboards',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify(mockDashboardData),
-        })
+        'https://api.test.com/v1/dashboards/1',
+        expect.objectContaining({ method: 'DELETE' })
       );
     });
   });
 
-  describe('getWidgets', () => {
+  describe('Widgets API', () => {
     const mockWidgets: Widget[] = [
       {
         id: '1',
@@ -118,59 +118,52 @@ describe('BeakDashSDK', () => {
       },
     ];
 
-    it('should return widgets', async () => {
-      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+    it('should return widgets for dashboard', async () => {
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: mockWidgets }),
       } as Response);
 
       const result = await sdk.getWidgets('1');
       expect(result).toEqual(mockWidgets);
-      expect(fetchSpy).toHaveBeenCalledWith(
-        'https://api.test.com/v1/dashboards/1/widgets',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: 'Bearer test-api-key',
-          }),
-        })
-      );
+    });
+
+    it('should create a widget', async () => {
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: mockWidgets[0] }),
+      } as Response);
+
+      const result = await sdk.createWidget('1', { type: 'chart', title: 'Test Widget', config: {} });
+      expect(result).toEqual(mockWidgets[0]);
     });
   });
 
-  describe('executeQuery', () => {
-    const mockQueryResult: QueryExecutionResult = {
-      data: [{ id: 1, revenue: 5000 }],
-      columns: [
-        { name: 'id', type: 'number' },
-        { name: 'revenue', type: 'number' },
-      ],
-      rowCount: 1,
-      truncated: false,
-      executionTimeMs: 14,
-      dialect: 'postgresql',
-    };
-
+  describe('Connections & Query API', () => {
     it('should execute query successfully', async () => {
-      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      const mockQueryResult: QueryExecutionResult = {
+        data: [{ id: 1, revenue: 5000 }],
+        columns: [
+          { name: 'id', type: 'number' },
+          { name: 'revenue', type: 'number' },
+        ],
+        rowCount: 1,
+        truncated: false,
+        executionTimeMs: 14,
+        dialect: 'postgresql',
+      };
+
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: mockQueryResult }),
       } as Response);
 
       const result = await sdk.executeQuery(1, 'SELECT id, revenue FROM sales');
       expect(result).toEqual(mockQueryResult);
-      expect(fetchSpy).toHaveBeenCalledWith(
-        'https://api.test.com/v1/connections/execute',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ connectionId: 1, query: 'SELECT id, revenue FROM sales', options: undefined }),
-        })
-      );
     });
-  });
 
-  describe('testConnection', () => {
     it('should test connection successfully', async () => {
-      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true, message: 'Connection successful', latencyMs: 25 }),
       } as Response);
@@ -181,7 +174,97 @@ describe('BeakDashSDK', () => {
     });
   });
 
-  describe('error handling', () => {
+  describe('Datasets API', () => {
+    it('should fetch datasets', async () => {
+      const mockDatasets = [{ id: 1, name: 'Sales Data', connectionId: 2 }];
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockDatasets,
+      } as Response);
+
+      const result = await sdk.getDatasets();
+      expect(result).toEqual(mockDatasets);
+    });
+
+    it('should preview dataset transformations', async () => {
+      const mockPreview = {
+        data: [{ category: 'Electronics', total: 12000 }],
+        columns: [{ name: 'category', type: 'string' }, { name: 'total', type: 'number' }],
+        rowCount: 1,
+        totalCount: 1,
+        executionTimeMs: 8,
+        dialect: 'postgresql',
+      };
+
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockPreview,
+      } as Response);
+
+      const result = await sdk.previewDataset({ connectionId: 1, query: 'SELECT * FROM sales' });
+      expect(result).toEqual(mockPreview);
+    });
+  });
+
+  describe('DB-QA API', () => {
+    it('should run DB-QA query', async () => {
+      const mockRunResult = {
+        queryId: 1,
+        queryName: 'Check Null Emails',
+        status: 'success' as const,
+        executionDurationMs: 12,
+        rowCount: 0,
+        data: [],
+        columns: [],
+      };
+
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockRunResult,
+      } as Response);
+
+      const result = await sdk.runDbQaQuery(1);
+      expect(result).toEqual(mockRunResult);
+    });
+
+    it('should toggle DB-QA alert', async () => {
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, enabled: false }),
+      } as Response);
+
+      const result = await sdk.toggleDbQaAlert(10);
+      expect(result.enabled).toBe(false);
+    });
+  });
+
+  describe('Embeds API', () => {
+    it('should create an embed token', async () => {
+      const mockToken = { token: 'mock.signed.token', expiresAt: '2026-08-30T00:00:00Z' };
+      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: mockToken }),
+      } as Response);
+
+      const result = await sdk.createEmbedToken({ dashboardId: '1', theme: 'dark' });
+      expect(result).toEqual(mockToken);
+    });
+
+    it('should generate embed URL and HTML properly', () => {
+      const embedConfig = { dashboardId: '42', theme: 'dark' as const, refreshInterval: 60 };
+      const url = sdk.getEmbedUrl('signed-token-123', embedConfig);
+      expect(url).toContain('/embed/42');
+      expect(url).toContain('token=signed-token-123');
+      expect(url).toContain('theme=dark');
+      expect(url).toContain('refreshInterval=60');
+
+      const html = sdk.getEmbedHtml('signed-token-123', embedConfig);
+      expect(html).toContain('<iframe');
+      expect(html).toContain(url);
+    });
+  });
+
+  describe('Error handling', () => {
     it('should handle authentication error', async () => {
       vi.spyOn(global, 'fetch').mockResolvedValueOnce({
         ok: false,

@@ -12,7 +12,12 @@ import {
   Widget,
   DashboardSchema,
   QueryExecutionResult,
-  QueryExecutionSchema
+  QueryExecutionSchema,
+  DatasetInfo,
+  DatasetPreviewResult,
+  DbQaQueryInfo,
+  DbQaAlertInfo,
+  DbQaRunResult,
 } from '@beakdash/shared';
 import {
   BeakDashError,
@@ -73,7 +78,7 @@ export class BeakDashSDK {
         case 429:
           throw new RateLimitError(error.message, error.details);
         case 500:
-          case 502:
+        case 502:
         case 503:
         case 504:
           throw new ServerError(error.message, error.details);
@@ -166,9 +171,48 @@ export class BeakDashSDK {
     });
   }
 
+  // Dataset methods
+  async getDatasets(spaceId?: number): Promise<DatasetInfo[]> {
+    const endpoint = spaceId ? `/datasets?spaceId=${spaceId}` : '/datasets';
+    return await this.request<DatasetInfo[]>(endpoint);
+  }
+
+  async previewDataset(options: {
+    datasetId?: number;
+    connectionId?: number;
+    query?: string;
+    transformOptions?: Record<string, any>;
+    maxRows?: number;
+  }): Promise<DatasetPreviewResult> {
+    return await this.request<DatasetPreviewResult>('/datasets/preview', {
+      method: 'POST',
+      body: JSON.stringify(options),
+    });
+  }
+
+  // DB-QA methods
+  async getDbQaQueries(): Promise<DbQaQueryInfo[]> {
+    return await this.request<DbQaQueryInfo[]>('/db-qa/queries');
+  }
+
+  async runDbQaQuery(queryId: number): Promise<DbQaRunResult> {
+    return await this.request<DbQaRunResult>(`/db-qa/queries/${queryId}/run`, {
+      method: 'POST',
+    });
+  }
+
+  async getDbQaAlerts(): Promise<DbQaAlertInfo[]> {
+    return await this.request<DbQaAlertInfo[]>('/db-qa/alerts');
+  }
+
+  async toggleDbQaAlert(alertId: number): Promise<{ success: boolean; enabled: boolean }> {
+    return await this.request<{ success: boolean; enabled: boolean }>(`/db-qa/alerts/${alertId}/toggle`, {
+      method: 'POST',
+    });
+  }
+
   // Embed methods
   async createEmbedToken(config: EmbedConfig): Promise<EmbedToken> {
-    // Validate embed config
     EmbedConfigSchema.parse(config);
 
     const response = await this.request<ApiResponse<EmbedToken>>('/embeds/tokens', {
@@ -188,7 +232,7 @@ export class BeakDashSDK {
     if (config.refreshInterval) params.refreshInterval = config.refreshInterval;
     if (config.customStyles) params.styles = JSON.stringify(config.customStyles);
 
-    return formatEmbedUrl(baseUrl, config.dashboardId, token, params);
+    return formatEmbedUrl(baseUrl, String(config.dashboardId), token, params);
   }
 
   getEmbedHtml(token: string, config: EmbedConfig): string {

@@ -42,15 +42,74 @@ export interface ConnectionInfo {
   isActive?: boolean;
 }
 
+// Dataset types
+export interface DatasetInfo {
+  id: number;
+  name: string;
+  connectionId: number;
+  query?: string;
+  refreshInterval?: string;
+  config?: Record<string, any>;
+  createdAt?: string;
+}
+
+export interface DatasetPreviewResult {
+  data: Record<string, any>[];
+  columns: { name: string; type: string }[];
+  rowCount: number;
+  totalCount: number;
+  executionTimeMs: number;
+  dialect: string;
+}
+
+// DB-QA types
+export interface DbQaQueryInfo {
+  id: number;
+  name: string;
+  category: string;
+  query: string;
+  executionFrequency?: string;
+  enabled?: boolean;
+  lastExecutionTime?: string;
+  nextExecutionTime?: string;
+}
+
+export interface DbQaAlertInfo {
+  id: number;
+  queryId: number;
+  name: string;
+  severity: string;
+  status: string;
+  enabled: boolean;
+  condition: Record<string, any>;
+  notificationChannels?: string[];
+  lastTriggeredAt?: string;
+}
+
+export interface DbQaRunResult {
+  queryId: number;
+  queryName: string;
+  status: 'success' | 'failure' | 'error';
+  executionDurationMs: number;
+  rowCount: number;
+  data: Record<string, any>[];
+  columns: any[];
+  errorMessage?: string;
+  evaluatedAlerts?: any[];
+  nextExecutionTime?: string | null;
+}
+
 // Embed types
 export interface EmbedConfig {
-  dashboardId: string;
+  dashboardId: string | number;
   theme?: 'light' | 'dark' | 'system';
   height?: string | number;
   width?: string | number;
   showHeader?: boolean;
   showControls?: boolean;
   refreshInterval?: number;
+  allowedOrigins?: string[];
+  expiresInSeconds?: number;
   customStyles?: Record<string, string>;
 }
 
@@ -108,13 +167,15 @@ export const QueryExecutionSchema = z.object({
 });
 
 export const EmbedConfigSchema = z.object({
-  dashboardId: z.string(),
+  dashboardId: z.union([z.string(), z.number()]),
   theme: z.enum(['light', 'dark', 'system']).optional(),
   height: z.union([z.string(), z.number()]).optional(),
   width: z.union([z.string(), z.number()]).optional(),
   showHeader: z.boolean().optional(),
   showControls: z.boolean().optional(),
   refreshInterval: z.number().optional(),
+  allowedOrigins: z.array(z.string()).optional(),
+  expiresInSeconds: z.number().optional(),
   customStyles: z.record(z.string()).optional()
 });
 
