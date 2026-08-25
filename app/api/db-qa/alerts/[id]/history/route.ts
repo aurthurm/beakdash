@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { sql } from 'drizzle-orm';
+import { dbQaAlerts, dbQaExecutionResults, dbQaQueries } from '@/lib/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
 // GET handler for retrieving alert history
 export async function GET(
@@ -10,7 +11,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Get authenticated user
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -31,71 +31,34 @@ export async function GET(
     }
 
     // Check if alert exists and belongs to the user
-    const alertCheckResult = await db.execute(sql`
-      SELECT * FROM db_qa_alerts 
-      WHERE id = ${alertId} AND user_id = ${userId}
-    `);
+    const alert = await db.query.dbQaAlerts.findFirst({
+      where: and(eq(dbQaAlerts.id, alertId), eq(dbQaAlerts.userId, userId)),
+    });
 
-
-    const alertRows = Array.isArray(alertCheckResult) ? alertCheckResult : [];
-    if (alertRows.length === 0) {
+    if (!alert) {
       return NextResponse.json(
         { error: 'Alert not found or access denied' },
         { status: 404 }
       );
     }
 
-    // Check if alert history table exists
-    const tableCheck = await db.execute(sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'db_qa_alert_history'
-      );
-    `);
-    
-    const tableExists = Array.isArray(tableCheck) && tableCheck.length > 0 && tableCheck[0].exists;
-    
-    if (!tableExists) {
-      // If table doesn't exist yet, return empty array
-      return NextResponse.json([]);
-    }
-
-    // Get alert history
-    const historyResult = await db.execute(sql`
-      SELECT h.*, er.execution_time, er.status as execution_status, q.name as query_name
-      FROM db_qa_alert_history h
-      LEFT JOIN db_qa_execution_results er ON h.execution_id = er.id
-      LEFT JOIN db_qa_queries q ON er.query_id = q.id
-      WHERE h.alert_id = ${alertId}
-      ORDER BY h.triggered_at DESC
-      LIMIT 100
-    `);
-
-    // Process and return the results
-    const history = Array.isArray(historyResult) ? historyResult : [];
-    
-    // Serialize the history entries
-    const serializedHistory = history.map(entry => {
-      const serialized: Record<string, any> = {};
-      
-      for (const key in entry) {
-        let value = entry[key];
-        if (value instanceof Date) {
-          value = value.toISOString();
-        }
-        serialized[key] = value;
-      }
-      
-      return serialized;
+    // Fetch execution results for this alert's query
+    const results = await db.query.dbQaExecutionResults.findMany({
+      where: eq(dbQaExecutionResults.queryId, alert.queryId),
+      orderBy: [desc(dbQaExecutionResults.executionTime)],
+      limit: 50,
     });
 
-    return NextResponse.json(serializedHistory);
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      alertId,
+      alertName: alert.name,
+      history: results,
+    });
+  } catch (error: any) {
     console.error('Error fetching alert history:', error);
-    
     return NextResponse.json(
-      { error: 'Failed to fetch alert history' },
+      { error: error.message || 'Failed to fetch alert history' },
       { status: 500 }
     );
   }

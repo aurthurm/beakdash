@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { sql } from 'drizzle-orm';
+import { dbQaAlerts } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 // POST handler for toggling the alert enabled status
 export async function POST(
@@ -10,7 +11,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Get authenticated user
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -31,39 +31,36 @@ export async function POST(
     }
 
     // Check if alert exists and belongs to the user
-    const alertCheckResult = await db.execute(sql`
-      SELECT * FROM db_qa_alerts 
-      WHERE id = ${alertId} AND user_id = ${userId}
-    `);
+    const alert = await db.query.dbQaAlerts.findFirst({
+      where: and(eq(dbQaAlerts.id, alertId), eq(dbQaAlerts.userId, userId)),
+    });
 
-    const alertRows = Array.isArray(alertCheckResult) ? alertCheckResult : [];
-    if (alertRows.length === 0) {
+    if (!alert) {
       return NextResponse.json(
         { error: 'Alert not found or access denied' },
         { status: 404 }
       );
     }
 
-    // Get current enabled status
-    const currentStatus = (alertRows[0] as Record<string, any>).enabled;
-    
-    // Toggle the status
-    await db.execute(sql`
-      UPDATE db_qa_alerts
-      SET enabled = ${!currentStatus}, updated_at = NOW()
-      WHERE id = ${alertId} AND user_id = ${userId}
-    `);
+    const nextStatus = !alert.enabled;
+
+    await db
+      .update(dbQaAlerts)
+      .set({
+        enabled: nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(dbQaAlerts.id, alertId));
 
     return NextResponse.json({
       success: true,
-      message: `Alert ${!currentStatus ? 'enabled' : 'disabled'} successfully`,
-      enabled: !currentStatus
+      message: `Alert ${nextStatus ? 'enabled' : 'disabled'} successfully`,
+      enabled: nextStatus,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error toggling alert status:', error);
-    
     return NextResponse.json(
-      { error: 'Failed to toggle alert status' },
+      { error: error.message || 'Failed to toggle alert status' },
       { status: 500 }
     );
   }
