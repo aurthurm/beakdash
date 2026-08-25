@@ -7,6 +7,7 @@ import { eq, and } from 'drizzle-orm';
 import { executeQuery } from '@/lib/db/query-engine';
 import { transformData, TransformPipelineOptions } from '@/lib/data/transformer';
 import { BaseConnectionConfig } from '@/lib/db/connection-pool';
+import { extractQueryParameters } from '@/lib/db/query-parameters';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +19,15 @@ export async function POST(request: NextRequest) {
     const userId = parseInt(session.user.id, 10);
     const body = await request.json();
 
-    const { datasetId, connectionId, query, transformOptions, maxRows = 100 } = body;
+    const { 
+      datasetId, 
+      connectionId, 
+      query, 
+      parameters = {}, 
+      transformOptions, 
+      maxRows = 100,
+      maxAgeSeconds = 300 
+    } = body;
 
     let targetConnectionId: number | null = null;
     let targetQuery: string = '';
@@ -61,15 +70,23 @@ export async function POST(request: NextRequest) {
       type: config.type || connection.type,
     };
 
-    // Execute query
+    // Extract query parameter definitions (Redash-style)
+    const parameterDefinitions = extractQueryParameters(targetQuery);
+
+    // Execute query with caching and parameter binding
     const rawResult = await executeQuery(
       connection.type,
       normalizedConfig,
       targetQuery || 'SELECT 1',
-      { readOnly: true, maxRows: 1000 }
+      { 
+        readOnly: true, 
+        maxRows: 1000,
+        parameters,
+        maxAgeSeconds 
+      }
     );
 
-    // Apply transformation pipeline if options are supplied
+    // Apply transformation pipeline if options are supplied (Lightdash / Evidence style)
     let transformedData = rawResult.data;
     let totalCount = rawResult.totalCount || rawResult.data.length;
 
@@ -92,6 +109,10 @@ export async function POST(request: NextRequest) {
       totalCount,
       executionTimeMs: rawResult.executionTimeMs,
       dialect: rawResult.dialect,
+      fromCache: rawResult.fromCache || false,
+      cachedAt: rawResult.cachedAt,
+      queryHash: rawResult.queryHash,
+      parameterDefinitions,
     });
   } catch (error: any) {
     console.error('Dataset preview error:', error);

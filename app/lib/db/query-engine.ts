@@ -7,6 +7,13 @@ import {
   getMysqlPool, 
   getSqliteDb 
 } from './connection-pool';
+import { substituteQueryParameters } from './query-parameters';
+import { 
+  computeQueryHash, 
+  getCachedQueryResult, 
+  setCachedQueryResult, 
+  CachedQueryResult 
+} from './query-cache';
 
 export interface QueryColumnMetadata {
   name: string;
@@ -22,12 +29,18 @@ export interface QueryExecutionResult {
   truncated: boolean;
   executionTimeMs: number;
   dialect: DatabaseDialect;
+  fromCache?: boolean;
+  cachedAt?: string;
+  queryHash?: string;
 }
 
 export interface QueryOptions {
   readOnly?: boolean;
   maxRows?: number;
   timeoutMs?: number;
+  parameters?: Record<string, any>;
+  cacheTtlSeconds?: number;
+  maxAgeSeconds?: number;
 }
 
 const FORBIDDEN_READONLY_COMMANDS = [
@@ -110,7 +123,6 @@ function inferColumnMetadata(data: Record<string, any>[]): QueryColumnMetadata[]
         inferredType = 'json';
         break;
       } else if (typeof val === 'string') {
-        // Check if ISO date string
         if (!isNaN(Date.parse(val)) && (val.includes('-') || val.includes(':')) && !/^\d+$/.test(val)) {
           inferredType = 'date';
         } else if (!isNaN(Number(val)) && val.trim() !== '') {
@@ -168,7 +180,7 @@ function parseCsv(csvText: string, delimiter: string = ','): Record<string, any>
 }
 
 /**
- * Execute a query safely across any supported database or API data source
+ * Execute a query safely across any supported database or API data source with caching and parameter binding
  */
 export async function executeQuery(
   connectionType: string,
@@ -176,15 +188,42 @@ export async function executeQuery(
   query: string,
   options: QueryOptions = {}
 ): Promise<QueryExecutionResult> {
-  const { readOnly = true, maxRows = 5000, timeoutMs = 15000 } = options;
+  const { 
+    readOnly = true, 
+    maxRows = 5000, 
+    timeoutMs = 15000, 
+    parameters = {},
+    cacheTtlSeconds = 300,
+    maxAgeSeconds = 300 
+  } = options;
 
-  const safetyCheck = validateQuerySafety(query, readOnly);
+  const dialect = detectDialect(connectionType, config);
+
+  // 1. Parameter Substitution (Redash-style)
+  const paramResult = substituteQueryParameters(query, parameters, dialect);
+  if (paramResult.errors && paramResult.errors.length > 0) {
+    throw new Error(`Parameter Error: ${paramResult.errors.join(', ')}`);
+  }
+
+  const effectiveSql = paramResult.sql;
+
+  // 2. Query Result Cache Check (Redash-style)
+  const queryHash = computeQueryHash(config.database || config.host || 'default', effectiveSql, paramResult.appliedParameters);
+  if (maxAgeSeconds > 0) {
+    const cached = getCachedQueryResult(queryHash, maxAgeSeconds);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  // 3. Safety Verification
+  const safetyCheck = validateQuerySafety(effectiveSql, readOnly);
   if (!safetyCheck.safe) {
     throw new Error(safetyCheck.reason);
   }
 
-  const dialect = detectDialect(connectionType, config);
   const startTime = Date.now();
+  let resultToCache: QueryExecutionResult;
 
   switch (dialect) {
     case 'postgresql': {
@@ -192,7 +231,7 @@ export async function executeQuery(
       const client = await pool.connect();
       try {
         await client.query(`SET statement_timeout = ${timeoutMs}`);
-        const result = await client.query(query);
+        const result = await client.query(effectiveSql);
         const executionTimeMs = Date.now() - startTime;
         
         const rawRows = result.rows || [];
@@ -210,7 +249,7 @@ export async function executeQuery(
             : ('string' as const),
         }));
 
-        return {
+        resultToCache = {
           data,
           columns: columns.length > 0 ? columns : inferColumnMetadata(data),
           rowCount: data.length,
@@ -218,15 +257,18 @@ export async function executeQuery(
           truncated,
           executionTimeMs,
           dialect: 'postgresql',
+          queryHash,
+          fromCache: false,
         };
       } finally {
         client.release();
       }
+      break;
     }
 
     case 'mysql': {
       const pool = getMysqlPool(config);
-      const [rows, fields] = await pool.query(query);
+      const [rows, fields] = await pool.query(effectiveSql);
       const executionTimeMs = Date.now() - startTime;
 
       const rawRows = (rows as any[]) || [];
@@ -239,7 +281,7 @@ export async function executeQuery(
         originalType: String(f.type),
       }));
 
-      return {
+      resultToCache = {
         data,
         columns: columns.length > 0 ? columns : inferColumnMetadata(data),
         rowCount: data.length,
@@ -247,7 +289,10 @@ export async function executeQuery(
         truncated,
         executionTimeMs,
         dialect: 'mysql',
+        queryHash,
+        fromCache: false,
       };
+      break;
     }
 
     case 'sqlite': {
@@ -258,14 +303,14 @@ export async function executeQuery(
       const db = getSqliteDb(filePath);
       const allAsync = promisify(db.all.bind(db));
 
-      const rawRows: any = await allAsync(query);
+      const rawRows: any = await allAsync(effectiveSql);
       const executionTimeMs = Date.now() - startTime;
 
       const rowsArray = Array.isArray(rawRows) ? rawRows : [];
       const truncated = rowsArray.length > maxRows;
       const data = truncated ? rowsArray.slice(0, maxRows) : rowsArray;
 
-      return {
+      resultToCache = {
         data,
         columns: inferColumnMetadata(data),
         rowCount: data.length,
@@ -273,7 +318,10 @@ export async function executeQuery(
         truncated,
         executionTimeMs,
         dialect: 'sqlite',
+        queryHash,
+        fromCache: false,
       };
+      break;
     }
 
     case 'rest': {
@@ -317,7 +365,6 @@ export async function executeQuery(
         if (Array.isArray(json)) {
           rawRows = json;
         } else if (typeof json === 'object' && json !== null) {
-          // If response has a data / results / items array
           const possibleArray = json.data || json.results || json.items || json.rows;
           if (Array.isArray(possibleArray)) {
             rawRows = possibleArray;
@@ -329,7 +376,7 @@ export async function executeQuery(
         const truncated = rawRows.length > maxRows;
         const data = truncated ? rawRows.slice(0, maxRows) : rawRows;
 
-        return {
+        resultToCache = {
           data,
           columns: inferColumnMetadata(data),
           rowCount: data.length,
@@ -337,11 +384,14 @@ export async function executeQuery(
           truncated,
           executionTimeMs,
           dialect: 'rest',
+          queryHash,
+          fromCache: false,
         };
       } catch (err: any) {
         clearTimeout(timeout);
         throw err;
       }
+      break;
     }
 
     case 'csv': {
@@ -352,7 +402,7 @@ export async function executeQuery(
       const truncated = rawRows.length > maxRows;
       const data = truncated ? rawRows.slice(0, maxRows) : rawRows;
 
-      return {
+      resultToCache = {
         data,
         columns: inferColumnMetadata(data),
         rowCount: data.length,
@@ -360,10 +410,20 @@ export async function executeQuery(
         truncated,
         executionTimeMs,
         dialect: 'csv',
+        queryHash,
+        fromCache: false,
       };
+      break;
     }
 
     default:
       throw new Error(`Unsupported database dialect: ${dialect}`);
   }
+
+  // 4. Save into Cache
+  if (cacheTtlSeconds > 0) {
+    setCachedQueryResult(queryHash, resultToCache, cacheTtlSeconds);
+  }
+
+  return resultToCache;
 }
