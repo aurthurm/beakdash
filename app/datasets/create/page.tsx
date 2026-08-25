@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Metadata } from 'next';
 import { AppLayout } from '@/components/layout/app-layout';
 import { CreateDatasetClient } from './client-page';
@@ -11,7 +11,9 @@ export const metadata: Metadata = {
 export default function CreateDatasetPage() {
   return (
     <AppLayout>
-      <CreateDatasetClient />
+      <Suspense fallback={<div className="container max-w-6xl px-4 py-6">Loading Studio...</div>}>
+        <CreateDatasetClient />
+      </Suspense>
     </AppLayout>
   );
 }

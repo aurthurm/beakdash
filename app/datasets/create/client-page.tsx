@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,14 +68,19 @@ const SQL_SNIPPETS = [
 
 export function CreateDatasetClient() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const initialConnectionId = searchParams.get('connectionId') || '';
+  const initialTable = searchParams.get('table');
   
   const [formData, setFormData] = useState<DatasetFormData>({
-    name: '',
+    name: initialTable ? `${initialTable.split('.').pop() || 'Table'} Dataset` : '',
     description: '',
     refreshFrequency: 'manual',
-    connectionId: '',
+    connectionId: initialConnectionId,
     queryType: 'sql',
-    sqlQuery: 'SELECT * FROM sales WHERE amount >= {{ min_amount:number:100 }} LIMIT 50;',
+    sqlQuery: initialTable
+      ? `SELECT * FROM ${initialTable} LIMIT 50;`
+      : 'SELECT * FROM sales WHERE amount >= {{ min_amount:number:100 }} LIMIT 50;',
   });
 
   const [paramValues, setParamValues] = useState<Record<string, any>>({});
