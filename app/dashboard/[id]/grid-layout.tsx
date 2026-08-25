@@ -40,9 +40,9 @@ export function GridLayoutComponent({ widgets, dashboardId }: GridLayoutProps) {
           x: position.x !== undefined ? position.x : 0,
           y: position.y !== undefined ? position.y : 0,
           w: position.w !== undefined ? position.w : 6,
-          h: position.h !== undefined ? position.h : 4,
+          h: position.h !== undefined ? Math.max(position.h, 5) : 5,
           minW: 2,
-          minH: 2,
+          minH: 4,
         };
         
         return item;

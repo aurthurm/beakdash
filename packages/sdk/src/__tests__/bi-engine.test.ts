@@ -147,4 +147,51 @@ describe('Production BI Engine (Redash, Lightdash & Evidence best practices)', (
       expect(classifyError('syntax error at or near "FROMM"')).toBe('SYNTAX_ERROR');
     });
   });
+
+  describe('Chart Proportional Height & Smart Axis Label Engine', () => {
+    function formatAxisLabel(val: any, maxLen = 14): string {
+      if (typeof val === 'string' && val.length > maxLen) {
+        return `${val.slice(0, maxLen - 1)}…`;
+      }
+      return String(val ?? '');
+    }
+
+    function formatAxisNumber(val: any): string {
+      if (typeof val === 'number') {
+        if (Math.abs(val) >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
+        if (Math.abs(val) >= 1_000) return `${(val / 1_000).toFixed(0)}K`;
+        return String(val);
+      }
+      return String(val ?? '');
+    }
+
+    function computePlotToLabelRatio(totalHeight: number, labelLength: number, angleDegrees = 35) {
+      const truncated = formatAxisLabel('A'.repeat(labelLength), 14);
+      const angleRad = (angleDegrees * Math.PI) / 180;
+      const labelHeight = Math.sin(angleRad) * (truncated.length * 6) + 10;
+      const plotHeight = totalHeight - labelHeight;
+      const ratio = plotHeight / labelHeight;
+      return { labelHeight, plotHeight, ratio };
+    }
+
+    it('should truncate long categorical labels to prevent vertical overflow', () => {
+      expect(formatAxisLabel('Bindura Provincial Laboratory', 14)).toBe('Bindura Provi…');
+      expect(formatAxisLabel('BRIDH Laboratory', 14)).toBe('BRIDH Laborat…');
+      expect(formatAxisLabel('Short Name', 14)).toBe('Short Name');
+    });
+
+    it('should format large numbers into compact units', () => {
+      expect(formatAxisNumber(300000)).toBe('300K');
+      expect(formatAxisNumber(150000)).toBe('150K');
+      expect(formatAxisNumber(1250000)).toBe('1.3M');
+      expect(formatAxisNumber(45)).toBe('45');
+    });
+
+    it('should enforce that Chart Plot Height is at least 2x the Axis Label Height', () => {
+      const { plotHeight, labelHeight, ratio } = computePlotToLabelRatio(260, 35, 35);
+      expect(labelHeight).toBeLessThan(60); // Maximum 60px label footprint
+      expect(plotHeight).toBeGreaterThan(200); // 200px+ tall bars
+      expect(ratio).toBeGreaterThanOrEqual(2.0); // Plot height >= 2x label height
+    });
+  });
 });

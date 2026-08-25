@@ -32,8 +32,8 @@ const renderColumnChart = (config: WidgetConfig, data: Record<string, any>[]) =>
   }
   
   data = makesureNumeric(data || []);
-  const antBarConfig = antConfig.toAntBarConfig(config);
-  return <Column data={data} {...antBarConfig} />;
+  const antColumnConfig = antConfig.toAntColumnConfig(config);
+  return <Column data={data} {...antColumnConfig} />;
 };
 
 // Render a line chart

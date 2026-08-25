@@ -202,9 +202,11 @@ type BaseWidgetConfig = {
   binWidth?: number;
   innerRadius?: number;
   tooltip?: boolean | {
-     channel: string;
-     valueFormatter: string;
-  };
+     channel?: string;
+     valueFormatter?: string;
+     shared?: boolean;
+     marker?: boolean;
+  } | any;
   sort?: boolean | {
     reverse?: boolean;
     by?: string;
@@ -250,12 +252,7 @@ type BaseWidgetConfig = {
     };
   };
   percent?: boolean;
-  label?: {
-    text?: string;
-    style?: {
-      fontWeight?: string;
-    };
-  };
+  label?: any;
   legend?: {
     size?: boolean;
     color?: {
@@ -276,7 +273,12 @@ type BaseWidgetConfig = {
       title?: boolean | string;
       grid?: boolean;
       tick?: boolean;
-      label?: boolean;
+      line?: boolean;
+      label?: boolean | any;
+      labelFormatter?: (v: any) => any;
+      labelTransform?: string;
+      labelSpacing?: number;
+      labelFontSize?: number;
       style?: {
         titleFill?: string;
       };
@@ -286,7 +288,12 @@ type BaseWidgetConfig = {
       title?: boolean | string;
       grid?: boolean;
       tick?: boolean;
-      label?: boolean;
+      line?: boolean;
+      label?: boolean | any;
+      labelFormatter?: (v: any) => any;
+      labelTransform?: string;
+      labelSpacing?: number;
+      labelFontSize?: number;
       style?: {
         titleFill?: string;
       };

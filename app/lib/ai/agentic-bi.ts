@@ -312,7 +312,9 @@ RULES:
           }
 
           const chartType = actionInput.chartType || 'column';
-          const pos = actionInput.position || { x: 0, y: 0, w: 6, h: 4 };
+          const pos = actionInput.position 
+            ? { ...actionInput.position, h: Math.max(actionInput.position.h || 5, 5) }
+            : { x: 0, y: 0, w: 6, h: 5 };
 
           const [newWidget] = await db.insert(widgets).values({
             name: actionInput.name || 'New Widget',

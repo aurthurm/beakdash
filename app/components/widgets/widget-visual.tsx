@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { AppstoreOutlined } from '@ant-design/icons';
 import { Widget } from '@/lib/db/schema';
 import ChartWidget from '@/components/widgets/chart/chart';
@@ -21,37 +22,46 @@ export const WidgetVisual = ({
   isResizing = false
 }: WidgetVisualProps) => {
   const { type, data, config } = widget;
+
+  // Subtract header height (~44px) so chart receives exact inner body height
+  const chartHeight = dimensions.height > 60 
+    ? Math.max(dimensions.height - 48, 220) 
+    : 260;
+
+  const chartDimensions = {
+    width: dimensions.width > 0 ? dimensions.width - 32 : undefined,
+    height: chartHeight,
+  };
+
   return (
-    <div className="h-full w-full" >
-      <div className="px-4 py-2">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-card">
+      <div className="px-4 py-2.5 border-b shrink-0 bg-muted/10">
         <WidgetHeader name={widget.name} description={widget.description || undefined} />
       </div>
-      <div 
-        className="px-4 flex-1 prose max-w-none w-full overflow-hidden"
-      >
+      <div className="px-3 py-2 flex-1 min-h-[200px] w-full overflow-hidden flex flex-col justify-center">
         {type === 'text' ? (
-          <div className="text-lg font-medium leading-relaxed overflow-auto h-full">
+          <div className="text-sm font-medium leading-relaxed overflow-auto h-full p-2">
             {config?.textContent?.split('\n').map((line: string, i: number) => (
-              <p key={i} className="break-words">{line || <br />}</p>
+              <p key={i} className="break-words mb-1">{line || <br />}</p>
             )) || (
               <p className="text-muted-foreground">No content available</p>
             )}
           </div>
         ) : type === 'chart' ? (
-          <div className="h-full overflow-hidden">
-            <ChartWidget widget={widget} dimensions={dimensions} />
+          <div className="h-full w-full overflow-hidden flex items-center justify-center">
+            <ChartWidget widget={widget} dimensions={chartDimensions as any} />
           </div>
         ) : type === 'table' ? (
-          <div className="h-full overflow-auto">
+          <div className="h-full w-full overflow-auto">
             <TableWidget data={data || []} config={{}} />
           </div>
         ) : (
-          <>
+          <div className="flex flex-col items-center justify-center p-6 text-muted-foreground">
             <AppstoreOutlined style={{ fontSize: '24px', marginBottom: '8px' }} />
-            <p>Unsupported widget type: {type}</p>
-          </>
+            <p className="text-xs">Unsupported widget type: {type}</p>
+          </div>
         )}
       </div>
     </div>
   );
-}
+};
