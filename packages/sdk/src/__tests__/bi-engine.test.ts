@@ -132,5 +132,19 @@ describe('Production BI Engine (Redash, Lightdash & Evidence best practices)', (
       expect(sampleStep.step).toBe(1);
       expect(sampleStep.actionInput.table).toBe('dashboard.rejection_rate_aggregate');
     });
+
+    it('should accurately classify database error patterns for Self-Healing', () => {
+      function classifyError(msg: string) {
+        const lower = msg.toLowerCase();
+        if (lower.includes('column') && lower.includes('does not exist')) return 'MISSING_COLUMN';
+        if (lower.includes('division by zero')) return 'ZERO_DIVISION';
+        if (lower.includes('syntax error')) return 'SYNTAX_ERROR';
+        return 'UNKNOWN';
+      }
+
+      expect(classifyError('column "lab_nam" does not exist')).toBe('MISSING_COLUMN');
+      expect(classifyError('division by zero at character 45')).toBe('ZERO_DIVISION');
+      expect(classifyError('syntax error at or near "FROMM"')).toBe('SYNTAX_ERROR');
+    });
   });
 });

@@ -10,6 +10,7 @@ import {
 import { eq, desc } from 'drizzle-orm';
 import { getSchemaInfo, SchemaInfo } from '../db/schema-info';
 import { executeQuery, validateQuerySafety } from '../db/query-engine';
+import { selfHealQuery } from './self-healing';
 
 export interface AgentStepTrace {
   step: number;
@@ -232,12 +233,38 @@ RULES:
           observation = `Query blocked for safety: ${safety.reason}`;
           stepStatus = 'error';
         } else {
-          const res = await executeQuery(activeConnection.type, normalizedConfig, sql);
-          observation = `Query returned ${res.rowCount} rows. Sample: ${JSON.stringify(res.data.slice(0, 3))}`;
+          try {
+            const res = await executeQuery(activeConnection.type, normalizedConfig, sql);
+            observation = `Query returned ${res.rowCount} rows. Sample: ${JSON.stringify(res.data.slice(0, 3))}`;
+          } catch (execErr: any) {
+            // Trigger Self-Healing Loop
+            const healing = await selfHealQuery(sql, execErr.message, schemaInfo, activeConnection.type, normalizedConfig);
+            if (healing.healed && healing.executionResult) {
+              observation = `🩹 Self-Healed SQL after error (${healing.errorCategory}): ${healing.explanation}. Returned ${healing.executionResult.rowCount} rows. Healed SQL: ${healing.healedSql}`;
+              actionInput.sql = healing.healedSql;
+            } else {
+              observation = `Query error: ${execErr.message}`;
+              stepStatus = 'error';
+            }
+          }
         }
       }
       else if (action === 'create_dataset') {
-        const { name, sql, refreshInterval = 'daily' } = actionInput;
+        let { name, sql, refreshInterval = 'daily' } = actionInput;
+        
+        // Verify and heal query before dataset creation
+        if (sql) {
+          try {
+            await executeQuery(activeConnection.type, normalizedConfig, sql);
+          } catch (dsErr: any) {
+            const healing = await selfHealQuery(sql, dsErr.message, schemaInfo, activeConnection.type, normalizedConfig);
+            if (healing.healed) {
+              sql = healing.healedSql;
+              actionInput.sql = healing.healedSql;
+            }
+          }
+        }
+
         const [newDs] = await db.insert(datasets).values({
           name: name || 'Agent Generated Dataset',
           userId,
@@ -249,7 +276,7 @@ RULES:
         }).returning();
 
         createdDatasets.push({ id: newDs.id, name: newDs.name });
-        observation = `Created Dataset "${newDs.name}" (ID: ${newDs.id})`;
+        observation = `Created Dataset "${newDs.name}" (ID: ${newDs.id})${actionInput.sql !== sql ? ' [with Self-Healed SQL]' : ''}`;
       }
       else if (action === 'create_dashboard') {
         const { name, description } = actionInput;
