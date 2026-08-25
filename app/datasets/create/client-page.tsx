@@ -281,7 +281,7 @@ export function CreateDatasetClient() {
   };
   
   return (
-    <div className="container max-w-6xl px-4 py-6">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
           <Button variant="ghost" size="sm" asChild className="mr-2">

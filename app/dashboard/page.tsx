@@ -40,7 +40,7 @@ export default async function DashboardPage({
 
   return (
     <AppLayout>
-      <div className="container max-w-6xl px-4 py-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Dashboards</h1>

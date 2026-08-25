@@ -289,7 +289,7 @@ export function GridLayoutComponent({ widgets, dashboardId }: GridLayoutProps) {
     }, [widgetDimensions]);
     
     return (
-      <div className="mb-6 space-y-4">
+      <div className="w-full mb-6 space-y-4">
         {/* Controls Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-lg bg-card border shadow-xs">
           <div className="flex items-center gap-2">

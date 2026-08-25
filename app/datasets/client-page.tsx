@@ -109,7 +109,7 @@ export function DatasetsClient() {
   );
 
   return (
-    <div className="container max-w-6xl px-4 py-6">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>

@@ -53,7 +53,7 @@ export default async function DashboardViewPage({ params }: Props) {
 
   return (
     <AppLayout>
-      <div className="container max-w-7xl px-4 py-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Breadcrumb & Navigation */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
           <Link href="/dashboard" className="hover:text-foreground flex items-center gap-1 transition-colors">
