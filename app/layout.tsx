@@ -6,6 +6,13 @@ import ClientLayout from './client-layout';
 export const metadata: Metadata = {
   title: 'BeakDash - AI-Powered Dashboard Creator',
   description: 'Create customized, data-driven dashboards with AI assistance',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  },
 };
 
 export default function RootLayout({
